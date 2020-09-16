@@ -11,7 +11,7 @@ window.onload = function () {
     var slider5 = document.getElementById('slider5');
     slider0.value = 350;        // sizing
     slider1.value = 15;         // line width
-    slider2.value = 140;        // rotation angle
+    slider2.value = 0;        // rotation angle
     slider3.value = 0;          // RGB: R
     slider4.value = 4;          // RGB: G
     slider5.value = 7;          // RGB: B
@@ -30,8 +30,8 @@ window.onload = function () {
 
     function drawOuter(color) {
         var radian;
-        var sRadius = shapeHeight/2 * 1.29;
-        var bRadius = shapeHeight/2 * 1.4;
+        var sRadius = shapeHeight/2 * 1.25;
+        var bRadius = shapeHeight/2 * 1.5;
         var rawAngle = 360/outerPeakNo;
         
         var possibleAngles = [1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 15, 18, 20, 24, 30, 36, 40, 45, 60, 72, 90, 120, 180, 360]
@@ -47,16 +47,18 @@ window.onload = function () {
         ctx.strokeStyle = strokeColor;
         ctx.fillStyle = color;
 
-        radian = angleToDraw*Math.PI/180;
-        ctx.moveTo(x_off+shapeWidth/2+Math.cos(radian)*sRadius, y_off+shapeHeight/2+(10/350)*shapeHeight+Math.sin(radian)*sRadius);
-        for (var i = 1; i <= 360; i++) {
-            if (i % angleToDraw < 1) {
-                radian = (i+angleToDraw/2)*Math.PI/180;
-                ctx.lineTo(x_off+shapeWidth/2+Math.cos(radian)*bRadius, y_off+shapeHeight/2+(10/350)*shapeHeight+Math.sin(radian)*bRadius);
+        // radian = angleToDraw*Math.PI/180;
+        // ctx.moveTo(x_off+shapeWidth/2+Math.cos(radian)*sRadius, y_off+shapeHeight/2+(10/350)*shapeHeight+Math.sin(radian)*sRadius);
+        for (var i = 0; i < 360; i += angleToDraw) {
 
-                radian = (i+angleToDraw)*Math.PI/180;
-                ctx.lineTo(x_off+shapeWidth/2+Math.cos(radian)*sRadius, y_off+shapeHeight/2+(10/350)*shapeHeight+Math.sin(radian)*sRadius);
-            }
+            bRadius = sRadius + Math.random()*(shapeHeight/2 * 1.5 - sRadius - 10) + 10;
+            console.log(Math.random());
+
+            radian = (i+angleToDraw/2)*Math.PI/180;
+            ctx.lineTo(x_off+shapeWidth/2+Math.cos(radian)*bRadius, y_off+shapeHeight/2+(10/350)*shapeHeight+Math.sin(radian)*bRadius);
+
+            radian = (i+angleToDraw)*Math.PI/180;
+            ctx.lineTo(x_off+shapeWidth/2+Math.cos(radian)*sRadius, y_off+shapeHeight/2+(10/350)*shapeHeight+Math.sin(radian)*sRadius);
         }
         
         ctx.closePath();
@@ -125,7 +127,7 @@ window.onload = function () {
         ctx.rotate(radian);
         ctx.translate(-(x_off+shapeWidth/2), -(y_off+shapeHeight/2+(10/350)*shapeHeight));
         
-        outerPeakNo = parseInt(slider2.value)/5;
+        outerPeakNo = parseInt(slider2.value)/10;
         if (outerPeakNo < 2) outerPeakNo = 3;
 
         // slider3-5: color of fills
