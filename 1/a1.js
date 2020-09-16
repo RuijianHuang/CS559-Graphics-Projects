@@ -9,12 +9,12 @@ window.onload = function () {
     var slider3 = document.getElementById('slider3');
     var slider4 = document.getElementById('slider4');
     var slider5 = document.getElementById('slider5');
-    slider0.value = 400;        // sizing
-    slider1.value = 10;         // line width
-    slider2.value = 330;        // rotation angle
-    slider3.value = 4;          // RGB: R
-    slider4.value = 9;          // RGB: G
-    slider5.value = 4;          // RGB: B
+    slider0.value = 350;        // sizing
+    slider1.value = 15;         // line width
+    slider2.value = 140;        // rotation angle
+    slider3.value = 0;          // RGB: R
+    slider4.value = 4;          // RGB: G
+    slider5.value = 7;          // RGB: B
 
     // global configs
     var shapeWidth;
@@ -24,8 +24,45 @@ window.onload = function () {
     var y_off;
     var lastSize = slider0.value;
 
+    var outerPeakNo = 40;
     var shapeLineWidth = 5;
     var strokeColor = '#000';
+
+    function drawOuter(color) {
+        var radian;
+        var sRadius = shapeHeight/2 * 1.29;
+        var bRadius = shapeHeight/2 * 1.4;
+        var rawAngle = 360/outerPeakNo;
+        
+        var possibleAngles = [1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 15, 18, 20, 24, 30, 36, 40, 45, 60, 72, 90, 120, 180, 360]
+        var angleToDraw;
+        for (var i = 0; i < possibleAngles.length; i++) {
+            if (rawAngle > possibleAngles[i])
+                angleToDraw = possibleAngles[i];
+            else break;
+        }
+
+        ctx.beginPath();
+        ctx.lineWidth = shapeLineWidth;
+        ctx.strokeStyle = strokeColor;
+        ctx.fillStyle = color;
+
+        radian = angleToDraw*Math.PI/180;
+        ctx.moveTo(x_off+shapeWidth/2+Math.cos(radian)*sRadius, y_off+shapeHeight/2+(10/350)*shapeHeight+Math.sin(radian)*sRadius);
+        for (var i = 1; i <= 360; i++) {
+            if (i % angleToDraw < 1) {
+                radian = (i+angleToDraw/2)*Math.PI/180;
+                ctx.lineTo(x_off+shapeWidth/2+Math.cos(radian)*bRadius, y_off+shapeHeight/2+(10/350)*shapeHeight+Math.sin(radian)*bRadius);
+
+                radian = (i+angleToDraw)*Math.PI/180;
+                ctx.lineTo(x_off+shapeWidth/2+Math.cos(radian)*sRadius, y_off+shapeHeight/2+(10/350)*shapeHeight+Math.sin(radian)*sRadius);
+            }
+        }
+        
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+    }
 
     function drawShape(color) {
         ctx.beginPath();
@@ -47,7 +84,7 @@ window.onload = function () {
         ctx.stroke();
     }
     
-    function drawCircle(color, radius, toFill, x, y) {
+    function drawCircle(color, radius, x, y) {
         ctx.beginPath();
         ctx.lineWidth = shapeLineWidth;
         ctx.strokeStyle = strokeColor;
@@ -57,7 +94,7 @@ window.onload = function () {
         ctx.arc(x_off+x, y_off+y, radius, 0, 2*Math.PI);
 
         ctx.closePath();
-        if (toFill) ctx.fill();
+        ctx.fill();
         ctx.stroke();
     }
 
@@ -70,7 +107,7 @@ window.onload = function () {
         shapeWidth = shapeHeight * 2/3;
         footWidth = shapeWidth/4;
         x_off = canvas.width/2 - shapeWidth/2;
-        y_off = canvas.height/2 - shapeHeight/2;
+        y_off = canvas.height/2 - shapeHeight/2 - 10;
         slider1.max = shapeWidth * 0.45;
 
         // slider1: line width (proportional to sizing if not manually changed)
@@ -82,22 +119,35 @@ window.onload = function () {
             shapeLineWidth = slider1.value;
         }
 
-        // slider2: rotation
-        ctx.translate(x_off+shapeWidth/2, y_off+shapeHeight/2);
-        ctx.rotate(slider2.value * Math.PI / 180);
-        ctx.translate(-(x_off+shapeWidth/2), -(y_off+shapeHeight/2));
+        // slider2: rotation and #outerPeaks
+        var radian = slider2.value * Math.PI/180;
+        ctx.translate(x_off+shapeWidth/2, y_off+shapeHeight/2+(10/350)*shapeHeight);
+        ctx.rotate(radian);
+        ctx.translate(-(x_off+shapeWidth/2), -(y_off+shapeHeight/2+(10/350)*shapeHeight));
+        
+        outerPeakNo = parseInt(slider2.value)/5;
+        if (outerPeakNo < 2) outerPeakNo = 3;
 
-        // slider3-5: color of fill
-        var colorString = "#"
-        colorString += (slider3.value).toString(16);
-        colorString += (slider4.value).toString(16);
-        colorString += (slider5.value).toString(16);
+        // slider3-5: color of fills
+        var patternFillColor = "#"
+        var backFillColor = "#"
         
-        drawShape(colorString);
-        drawCircle('#FFF', (shapeWidth/2)*0.4, true, shapeWidth/2, shapeWidth/2);
-        drawCircle('#444', (shapeHeight/2)*1.5, false, shapeWidth/2, shapeHeight/2); // FIXME
+        var s3 = parseInt(slider3.value);
+        var s4 = parseInt(slider4.value);
+        var s5 = parseInt(slider5.value);
+        patternFillColor += s3.toString(16);
+        patternFillColor += s4.toString(16);
+        patternFillColor += s5.toString(16);
+        backFillColor += ((s3 + 8)%16).toString(16);
+        backFillColor += ((s4 + 8)%16).toString(16);
+        backFillColor += ((s5 + 8)%16).toString(16);
+
+        // now update
+        drawOuter(backFillColor, patternFillColor);
+        drawShape(patternFillColor);
+        drawCircle(backFillColor, (shapeWidth/2)*0.4, shapeWidth/2, shapeWidth/2);
+
         ctx.restore();
-        
     }
 
     slider0.addEventListener('input', draw);
