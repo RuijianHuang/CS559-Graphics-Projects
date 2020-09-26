@@ -1,12 +1,13 @@
 This program is a simple drawing with manipulations of basic properties of a 
 manually-drawn pattern (in this case, an abysmal mimicry of a certain typography
-of the 1st letter of my first name), which can be controlled by different sliders.
+of the 1st letter of my first name) and (self-defined) special effects.
+The pattern can be controlled by 6 different sliders.
 
 Sliders - From top to bottom:
     slider1: control sizing [smaller <-> larger]
     slider2: control rotation [degree: 0-720] and #corners of the outer rings
     slider3: control linewidth
-    slider4-6: control colors main pattern ("R") and its surrounding in a (rather)
+    slider4~6: control colors main pattern ("R") and its surrounding in a (rather)
             contrasting manner
 
 That's it, thanks!
