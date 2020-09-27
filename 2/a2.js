@@ -9,8 +9,12 @@ var slider0 = document.getElementById('slider0');
 // elapsed time calculation
 let start;
 
+function get_proportion () {
+    return (slider0.value-slider0.min)/(slider0.max-slider0.min);
+}
+
 function calc_ball_coordinates(elapsed) {
-    var bounce_x = 1550;
+    var bounce_x = 1530;
     var cycle = slider0.value;
     var half_cycle = cycle/2;
     var x_off = elapsed % cycle;
@@ -18,7 +22,7 @@ function calc_ball_coordinates(elapsed) {
 
     var max_osci = 10;
     var min_osci = 2;
-    var osci_val = (slider0.value-slider0.min)/(slider0.max-slider0.min) * (max_osci-min_osci) + min_osci
+    var osci_val = get_proportion() * (max_osci-min_osci) + min_osci
 
     // calculate dx based on timestamp and canvas size (hard-coded for now)
     if (x_off < cycle/2)
@@ -50,13 +54,69 @@ function draw_ball(color1, color2) {
     ctx.fill();
 }
 
+function draw_base(color) {
+    ctx.strokeStyle = 'black';
+    ctx.lineWidth = 15;
+
+    ctx.beginPath();
+    ctx.arc(100, 100, 100, 0, 2*Math.PI);
+    ctx.fillStyle = '#444';
+    ctx.closePath();
+    ctx.stroke();
+    ctx.fill();
+    
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(200, 100);
+    ctx.lineTo(200, 300);
+    ctx.arc(100, 300, 100, 0, 1*Math.PI);
+    ctx.lineTo(0, 100);
+    ctx.arc(100, 100, 100, 1*Math.PI, 0, true);
+
+    ctx.closePath();
+    ctx.stroke();
+    ctx.fill();
+}
+
+function draw_cannon(color) {
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 15;
+
+    ctx.fillStyle = color; 
+    
+    ctx.beginPath();
+    ctx.moveTo(30, 70);
+    ctx.lineTo(0, 200);
+    ctx.arc(100, 200, 100, 1*Math.PI, 0, true);
+    ctx.lineTo(170, 70);
+
+    ctx.scale(1, 0.3);
+    ctx.translate(0, 150);
+    ctx.arc(100, 70, 70, 2*Math.PI, 1*Math.PI, true);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.fill();
+
+    ctx.arc(100, 70, 70, 1*Math.PI, 2*Math.PI, true);
+    ctx.stroke();
+    
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.translate(0, 35);
+    ctx.arc(100, 35, 50, 0, 2*Math.PI);
+    ctx.closePath();
+    ctx.fill();
+}
+
 function draw(timestamp) {
     canvas.width = canvas.width;
 
+    // calculate time elapsed for animation
     if (start == undefined) start = timestamp;
     const elapsed = timestamp - start;
     if (elapsed == 6000) start = timestamp;
 
+    // coordinates of ball based on time elapsed
     var coor = calc_ball_coordinates(elapsed);
     var dx = coor['x'];
     var dy = coor['y'];
@@ -75,11 +135,39 @@ function draw(timestamp) {
     draw_ball('tan', 'black');
     ctx.restore();
 
-    // racket: TODO
+    var sp = get_proportion();
+    // left cannon
+    ctx.save();
+    ctx.translate(5, canvas.height*6.3/10);
 
-    ctx.translate(10, canvas.height*8/10);
-    // ctx.translate()
-    // draw_ball('white', 'black');
+    // slider0 adjustment
+    ctx.rotate((20-25*sp)*Math.PI/180);
+    ctx.translate(50*sp, -150+150*sp);
+
+    ctx.translate(100, 200);
+    ctx.rotate(45*Math.PI/180);
+    ctx.translate(-100, -200);
+    ctx.scale(1, 0.9);
+
+    draw_cannon('#444');
+    ctx.restore();
+
+    // right cannon
+    ctx.save();
+    ctx.translate(canvas.width-270, canvas.height*6.3/10);
+
+    // slider0 adjustment
+    ctx.rotate(-(20-25*sp)*Math.PI/180);
+    ctx.translate(-50*sp, -150+150*sp);
+
+    ctx.translate(100, 200);
+    ctx.rotate(-45*Math.PI/180);
+    ctx.translate(-100, -200);
+    ctx.scale(1, 0.9);
+
+    draw_cannon('#444');
+    ctx.restore();
+
 
 
     requestAnimationFrame(draw);
