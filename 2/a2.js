@@ -54,30 +54,6 @@ function draw_ball(color1, color2) {
     ctx.fill();
 }
 
-function draw_base(color) {
-    ctx.strokeStyle = 'black';
-    ctx.lineWidth = 15;
-
-    ctx.beginPath();
-    ctx.arc(100, 100, 100, 0, 2*Math.PI);
-    ctx.fillStyle = '#444';
-    ctx.closePath();
-    ctx.stroke();
-    ctx.fill();
-    
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.moveTo(200, 100);
-    ctx.lineTo(200, 300);
-    ctx.arc(100, 300, 100, 0, 1*Math.PI);
-    ctx.lineTo(0, 100);
-    ctx.arc(100, 100, 100, 1*Math.PI, 0, true);
-
-    ctx.closePath();
-    ctx.stroke();
-    ctx.fill();
-}
-
 function draw_cannon(color) {
     ctx.strokeStyle = '#000';
     ctx.lineWidth = 15;
@@ -174,7 +150,6 @@ function draw(timestamp) {
 }
 
 slider0.value = slider0.middle;
-
 slider0.addEventListener('input', null)
 
 window.requestAnimationFrame(draw)
