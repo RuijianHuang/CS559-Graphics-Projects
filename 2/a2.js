@@ -66,8 +66,8 @@ function draw_cannon(color) {
     ctx.arc(100, 200, 100, 1*Math.PI, 0, true);
     ctx.lineTo(170, 70);
 
-    ctx.scale(1, 0.3);
-    ctx.translate(0, 150);
+    ctx.scale(1, 0.2);
+    ctx.translate(0, 300);
     ctx.arc(100, 70, 70, 2*Math.PI, 1*Math.PI, true);
     ctx.closePath();
     ctx.stroke();
@@ -108,13 +108,14 @@ function draw(timestamp) {
     ctx.rotate(dx * Math.PI/180);
     ctx.translate(-100, -100);
 
-    draw_ball('tan', 'black');
+    draw_ball('blue', 'black');
     ctx.restore();
 
     var sp = get_proportion();
+
     // left cannon
     ctx.save();
-    ctx.translate(5, canvas.height*6.3/10);
+    ctx.translate(5, canvas.height*6/10);
 
     // slider0 adjustment
     ctx.rotate((20-25*sp)*Math.PI/180);
@@ -123,27 +124,27 @@ function draw(timestamp) {
     ctx.translate(100, 200);
     ctx.rotate(45*Math.PI/180);
     ctx.translate(-100, -200);
-    ctx.scale(1, 0.9);
+    ctx.scale(1.5, 1);
 
     draw_cannon('#444');
     ctx.restore();
 
     // right cannon
     ctx.save();
-    ctx.translate(canvas.width-270, canvas.height*6.3/10);
+    ctx.translate(canvas.width-50, canvas.height*6/10);
 
     // slider0 adjustment
-    ctx.rotate(-(20-25*sp)*Math.PI/180);
-    ctx.translate(-50*sp, -150+150*sp);
+    ctx.scale(-1, 1);
+    ctx.rotate((20-25*sp)*Math.PI/180);
+    ctx.translate(50*sp, -150+150*sp);
 
     ctx.translate(100, 200);
-    ctx.rotate(-45*Math.PI/180);
+    ctx.rotate(45*Math.PI/180);
     ctx.translate(-100, -200);
-    ctx.scale(1, 0.9);
+    ctx.scale(1.5, 1);
 
     draw_cannon('#444');
     ctx.restore();
-
 
 
     requestAnimationFrame(draw);
