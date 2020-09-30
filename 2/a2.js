@@ -161,4 +161,4 @@ function draw(timestamp) {
 }
 
 
-window.requestAnimationFrame(draw)
+window.requestAnimationFrame(draw);
