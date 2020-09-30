@@ -1,58 +1,69 @@
 'use strict';
-var canvas = document.getElementById('myCanvas');
-var ctx = canvas.getContext('2d');
-
-// slider initializations
-var slider0 = document.getElementById('slider0');
-     
+let canvas = document.getElementById('myCanvas');
+let ctx = canvas.getContext('2d');
 
 // elapsed time calculation
 let start;
 
-function get_proportion () {
-    return (slider0.value-slider0.min)/(slider0.max-slider0.min);
-}
-
 function calc_ball_coordinates(elapsed) {
-    var bounce_x = 1530;
-    var cycle = slider0.value;
-    var half_cycle = cycle/2;
-    var x_off = elapsed % cycle;
-    var dx;
+    let bounce_x = 1530;
+    let cycle = 6000;
+    let half_cycle = cycle/2;
+    let x_off = elapsed % cycle;
+    let dx;
 
-    var max_osci = 10;
-    var min_osci = 2;
-    var osci_val = get_proportion() * (max_osci-min_osci) + min_osci
+    let max_osci = 10;
+    let min_osci = 2;
+    let osci_val = 0.5 * (max_osci-min_osci) + min_osci
 
     // calculate dx based on timestamp and canvas size (hard-coded for now)
-    if (x_off < cycle/2)
-        dx = x_off / half_cycle * bounce_x;
-    else
-        dx = (half_cycle - (x_off - half_cycle)) / half_cycle * bounce_x
+    if (x_off < cycle/2) dx = x_off / half_cycle * bounce_x;
+    else dx = (half_cycle - (x_off - half_cycle)) / half_cycle * bounce_x
 
     // calc dy based on dx
-    var tra_w = canvas.width*8/10;
-    var tra_h = (canvas.height*8/10)*osci_val/10;
-    var a = tra_h/Math.pow(tra_w/2, 2);
-    var dy = a*Math.pow((dx-tra_w/2), 2) - 500*osci_val/10;
+    let tra_w = canvas.width*8/10;
+    let tra_h = (canvas.height*8/10)*osci_val/10;
+    let a = tra_h/Math.pow(tra_w/2, 2);
+    let dy = a*Math.pow((dx-tra_w/2), 2) - 500*osci_val/10;
 
-    var ret = {'x':dx, 'y':dy};
+    let ret = {'x':dx, 'y':dy};
     return ret;
+}
+
+function draw_arm(color1, color2, dx) {
+    let distance = 180;
+    let width = 400;
+
+    ctx.fillStyle = color1;
+    ctx.fillRect(100-width/2, 100-distance, width, 20);
+    ctx.fillRect(100-width/2, 100+distance, width, 20);
+
+    ctx.fillStyle = color2;
+
+    ctx.save();
+    ctx.translate(100, 100-distance+20/2);
+    ctx.rotate((-dx/2)*Math.PI/180);
+    ctx.translate(-100, -(100-distance+20/2));
+    ctx.fillRect(100-width/2, 100-distance, width, 20);
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(100, 100+distance+20/2);
+    ctx.rotate((-dx/2)*Math.PI/180);
+    ctx.translate(-100, -(100+distance+20/2));
+    ctx.fillRect(100-width/2, 100+distance, width, 20);
+    ctx.restore();
 }
 
 function draw_ball(color1, color2) {
     ctx.beginPath();
     ctx.fillStyle = color1;
-    ctx.arc(100, 100, 100, 0, 1*Math.PI);
-    ctx.closePath();
-    ctx.fill();
-    
-    ctx.beginPath();
-    ctx.fillStyle = color2;
-    ctx.arc(100, 100, 100, 1*Math.PI, 2*Math.PI);
+    ctx.arc(100, 100, 100, 0.2*Math.PI, 1.9*Math.PI);
+    ctx.lineTo(100, 100);
     ctx.closePath();
     ctx.fill();
 }
+
 
 function draw_cannon(color) {
     ctx.strokeStyle = '#000';
@@ -88,77 +99,66 @@ function draw(timestamp) {
     canvas.width = canvas.width;
 
     // calculate time elapsed for animation
-    if (start == undefined) start = timestamp;
+    if (start === undefined) start = timestamp;
     const elapsed = timestamp - start;
     if (elapsed == 6000) start = timestamp;
 
     // coordinates of ball based on time elapsed
-    var coor = calc_ball_coordinates(elapsed);
-    var dx = coor['x'];
-    var dy = coor['y'];
+    let coor = calc_ball_coordinates(elapsed);
+    let dx = coor['x'];
+    let dy = coor['y'];
 
     // trajectory/ rotation transformation
     ctx.save();
+
     ctx.translate(100, 500);
     ctx.translate(dx, dy)
 
-    ctx.scale(0.5, 0.5);
-
+    ctx.save();
+    ctx.scale(0.3, 0.3);
     ctx.translate(100, 100);
     ctx.rotate(dx * Math.PI/180);
     ctx.translate(-100, -100);
-
-    draw_ball('blue', 'black');
+    draw_arm('tan','blue', dx);
     ctx.restore();
 
-    var sp = get_proportion();
-
-    // left cannon
     ctx.save();
-    ctx.translate(5, canvas.height*6/10);
-
-    // slider0 adjustment
-    ctx.rotate((20-25*sp)*Math.PI/180);
-    ctx.translate(50*sp, -150+150*sp);
-
-    ctx.translate(100, 200);
-    ctx.rotate(45*Math.PI/180);
-    ctx.translate(-100, -200);
-    ctx.scale(1.5, 1);
-
-    draw_cannon('#444');
+    ctx.scale(0.3, 0.3);
+    draw_ball('yellow', 'black');
+    ctx.restore();
     ctx.restore();
 
-    // right cannon
-    ctx.save();
-    ctx.translate(canvas.width-50, canvas.height*6/10);
+    // cannons
+    let sp = 0.5;
+    for (let i = 0; i < 2; i++) {
+        let horizonal;
+        let vertical;
+        if (i == 1) {
+            horizonal = canvas.width-50;
+            vertical = -150+150*sp-40;
+        } else {
+            horizonal = -10;
+            vertical = -150+150*sp-70;
+        }
+        ctx.save();
+        ctx.translate(horizonal, canvas.height*6/10);
 
-    // slider0 adjustment
-    ctx.scale(-1, 1);
-    ctx.rotate((20-25*sp)*Math.PI/180);
-    ctx.translate(50*sp, -150+150*sp);
+        if (i == 1) ctx.scale(-1, 1);
+        ctx.rotate((20-25*sp)*Math.PI/180);
+        ctx.translate(50*sp, vertical);
 
-    ctx.translate(100, 200);
-    ctx.rotate(45*Math.PI/180);
-    ctx.translate(-100, -200);
-    ctx.scale(1.5, 1);
+        ctx.translate(100, 200);
+        ctx.rotate(45*Math.PI/180);
+        ctx.translate(-100, -200);
+        ctx.scale(1.7, 1);
 
-    draw_cannon('#444');
-    ctx.restore();
+        draw_cannon('#444');
+        ctx.restore();
+    }
 
 
     requestAnimationFrame(draw);
 }
 
-slider0.value = slider0.middle;
-slider0.addEventListener('input', null)
 
 window.requestAnimationFrame(draw)
- 
-// let sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-// let update = async timestamp => {
-//     await sleep(10);
-//     requestAnimationFrame(draw);
-// }
-
-// window.requestAnimationFrame(update);
