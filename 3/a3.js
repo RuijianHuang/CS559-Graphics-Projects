@@ -2,7 +2,7 @@ function setup() {
     let canvas = document.getElementById('myCanvas');
     let ctx = canvas.getContext('2d');
     let slider1 = document.getElementById('slider1');
-    slider1.value = 6000;
+    slider1.value = 4000;
     
     let stack = [mat3.create()];    // array as stack for save and restore emulation
     let start;                      // mark the start of time
@@ -184,8 +184,8 @@ function setup() {
             x = radius*Math.cos(radian(a));
             y = radius*Math.sin(radian(a));
             for (let i = 0; i < 2; ++i)
-                // fillrect(x+jiggle(j, true), y+jiggle(j, false), sparkle, sparkle, color[i]);
-                fillrect(x, y, sparkle, sparkle, color[i]);
+                fillrect(x+jiggle(j/2, true), y+jiggle(j/2, false), sparkle, sparkle, color[i]);
+                // fillrect(x, y, sparkle, sparkle, color[i]);
         }
     }
 
@@ -247,8 +247,10 @@ function setup() {
             let T_to_blast = mat3.create();
             mat3.fromTranslation(T_to_blast, [blast_motion, scary_ball_level]);
             mult(T_to_blast);
-            for (let r = 1; r <= max_blast_radius; r+=step)
-                blast(ball_color, r, step);
+            if ((side == 'left' && get_proportion() < 0.73) || side == 'right') {
+                for (let r = 1; r <= max_blast_radius; r+=step)
+                    blast(ball_color, r, step);
+            }
             restore();
         }
 
@@ -258,7 +260,8 @@ function setup() {
     function background(color) {
         ctx.fillStyle = color;
         ctx.beginPath();
-        fillrect(0, ground_level, canvas.width, canvas.height, color);
+        fillrect(0, ground_level, canvas.width, canvas.height-300, color);
+        // fillrect(0, 0, canvas.width, ground_level, 'blue');
     }
 
     function draw(timestamp) {
@@ -272,7 +275,7 @@ function setup() {
 
         // let the drawing begin
         // some background
-        // background('#446444'); // TODO
+        background('#446444');
 
         // symmatrical main scenes
         main_scene('left');
