@@ -134,7 +134,7 @@ function setup() {
         mult(T_to_center);
 
         // calculate body rotation based on time elapsed
-        let max_rotation = 50;
+        let max_rotation = 70;
         let body_rotation;
         let proportion = get_proportion();
         if (proportion > 0.5) proportion = 1-proportion;
@@ -206,7 +206,7 @@ function setup() {
             mat3.fromTranslation(T_side, [canvas.width, 0]);
             mat3.scale(T_side, T_side, [-1, 1])
             mult(T_side);
-            stick_color = '#888';
+            stick_color = '#666';
             ball_color = ['#800080', '#9400D3'];
         }
         

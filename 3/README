@@ -1,0 +1,16 @@
+This program is an simple animation of a fighting scene between 2 monstrously 
+simple stick figures. 
+
+The hierarchy of drawing is demonstrated in different sections of the two stick 
+figures' body.
+
+All drawing is accomplished by using glmatrix library to build wrapper functions
+for canvas' drawing functionalities (e.g. save(), restore, mult(), moveTo(), 
+lineTo(), fillrect(), circle(), etc.). No canvas function related to these 
+functionalities is invoked (with exceptions to ctx.moteTo() in moveTo, ctx.lineTo()
+in lineTo(), and others such as ctx.beginPath() and ctx.fillStyle)
+
+The slider below the drawing can be used to change the speed/intensity of the 
+animation.
+
+Have fun! (some computers' cooling system may be used more than usual during execution)
