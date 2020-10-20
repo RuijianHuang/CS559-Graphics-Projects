@@ -16,21 +16,20 @@ function setup() {
     pushHermitePoint([3, 1],   [1, -3]);
     pushHermitePoint([4, 0],   [1.8, 0]);
 
-    // for(let i = 0; i < 3; ++i) {            // ease of adding points
-    //     let j = i + 4;
-    //     pushHermitePoint([j+1, 1.5],   [0, 1.5]);
-    //     pushHermitePoint([j+0.5, 3],   [-1, 0]);
-    //     pushHermitePoint([j, 1.5],     [0, -1.5]);
-    //     pushHermitePoint([j+1, 0],     [1.8, 0]);
-    // }
+    for(let i = 0; i < 3; ++i) {            // ease of adding points
+        let j = i + 4;
+        pushHermitePoint([j+1, 1.5],   [0, 1.5]);
+        pushHermitePoint([j+0.5, 3],   [-1, 0]);
+        pushHermitePoint([j, 1.5],     [0, -1.5]);
+        pushHermitePoint([j+1, 0],     [1.8, 0]);
+    }
+
     let slider_granularity = 1000;
     slider1.max = pls.length*slider_granularity;
 
     // helper to insert a point into an array in hermite cubic formatting
-    function pushHermitePoint(p, d) {
-        let last = pls[pls.length-1];
-        pls.push([last[2], last[3], p, d]);
-    }
+    function pushHermitePoint(p, d) 
+    { let last = pls[pls.length-1]; pls.push([last[2], last[3], p, d]); }
 
     // current time elapsed proportional to a cycle
     function get_proportion() { return elapsed%cycle/cycle; }
@@ -79,13 +78,13 @@ function setup() {
         return result;
     }
    
+    // switch to different points in defined hermite curve at different t
     function composite(t) {
         for(let i = 0; i < pls.length; ++i) {
-            if (i <= t && t < i+1) {
-                console.log("composite: t", t, "choice of hermite points", i, pls[i], 
-                    "hermite[x, y]: ", hermite_cubic(pls[i], t));
-                return hermite_cubic(pls[i], t%i);
-            }
+            if (i <= t && t < i+1)    
+                return hermite_cubic(pls[i], t<1 ? t : t%i);
+            else if (t == pls.length) 
+                return hermite_cubic(pls[pls.length-1], 1);
         }
     }
 
