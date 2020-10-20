@@ -2,14 +2,14 @@ function setup() {
     let canvas = document.getElementById('myCanvas');
     let ctx = canvas.getContext('2d');
     let slider1 = document.getElementById('slider1');
-    slider1.value = 0;
+    slider1.value = 50000;
     
     // global variables
     let stack = [mat3.create()];    // array as stack for save and restore emulation
     let start;                      // mark the start of time
     let elapsed;                    // time elapsed
-    let t_obj;                      // record where the obj is
-    let slider_granularity = 1000;
+    let cycle = slider1.value;      // define length of an animation cycle
+    let t_obj;                      // record where the obj is through parameter t
 
     // helper to insert a point into an array in hermite cubic formatting
     function pushHermitePoint(p, d) 
@@ -50,7 +50,7 @@ function setup() {
     }
 
     // helper axes 
-    function drawAxes(color) {
+    function drawGrid(color) {
         ctx.strokeStyle = color;
         ctx.lineWidth=2;
         ctx.beginPath();
@@ -66,6 +66,48 @@ function setup() {
         }
         ctx.stroke();
     }
+    
+    // tiny cart to ride
+    function roller(fillColor, strokeColor) {
+        ctx.strokeStyle = strokeColor;
+        ctx.beginPath();
+
+        // cart
+        fillrect(0, 0, 20, 10, fillColor);
+        
+        // body parts
+        moveTo(10, 10); lineTo(10, 10+4);   // neck
+        moveTo(10, 10); lineTo(10+8, 10+5);
+        moveTo(10, 10); lineTo(10-8, 10+5);
+        ctx.stroke();
+        ctx.closePath();
+        
+        // decorations
+        fillrect(2, 4, 15, 2, "#0a0");
+        
+        // head
+        ctx.beginPath();
+        ctx.fillStyle = "#333";
+        circle(10, 18, 4, 0, 360);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.fill();
+        
+        // wheels
+        ctx.beginPath();
+        ctx.fillStyle = "#080";
+        circle(3, 0, 3, 0, 360);
+        ctx.closePath;
+        ctx.stroke();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.fillStyle = "#080";
+        circle(20-3, 0, 3, 0, 360);
+        ctx.closePath;
+        ctx.stroke();
+        ctx.fill();
+        
+    }
 
 
     // hermite related 
@@ -77,7 +119,7 @@ function setup() {
         for(let i = 0; i < 9; ++i) {
             let j = i + 2;
             let magnifier = (j <=4 ? j : 10-j) * 10/10;
-            pushHermitePoint([j, magnifier*Math.pow(-1, j-1)], [2, 0]);         // TODO: Picassofication awaits
+            pushHermitePoint([j, magnifier*Math.pow(-1, j-1)], [2*i, 0]);         // TODO: Picassofication awaits
         }
         
         for(let i = 0; i < 5; ++i) {
@@ -121,7 +163,7 @@ function setup() {
     // switch to different points in defined hermite curve at different t
     function composite(t, B) {
         for(let i = 0; i < pls.length; ++i) {
-            if (i <= t && t < i+1)    
+            if (i <= t && t < i+1)
                 return hermite_cubic(B, pls[i], t<1 ? t : t%i);
             else if (t == pls.length) 
                 return hermite_cubic(B, pls[pls.length-1], 1);
@@ -142,51 +184,10 @@ function setup() {
         }
         ctx.stroke();
     }
-    
-    function roller(fillColor, strokeColor) {
-        ctx.strokeStyle = strokeColor;
-        ctx.beginPath();
-
-        // cart
-        fillrect(0, 0, 20, 10, fillColor);
-        
-        // body parts
-        moveTo(10, 10); lineTo(10, 10+4);   // neck
-        moveTo(10, 10); lineTo(10+8, 10+5);
-        moveTo(10, 10); lineTo(10-8, 10+5);
-        ctx.stroke();
-        ctx.closePath();
-        
-        // decorations
-        fillrect(2, 4, 15, 2, "#0a0");
-        
-        // head
-        ctx.beginPath();
-        ctx.fillStyle = "#333";
-        circle(10, 18, 4, 0, 360);
-        ctx.closePath();
-        ctx.stroke();
-        ctx.fill();
-        
-        // wheels
-        ctx.beginPath();
-        ctx.fillStyle = "#080";
-        circle(3, 0, 3, 0, 360);
-        ctx.closePath;
-        ctx.stroke();
-        ctx.fill();
-        ctx.beginPath();
-        ctx.fillStyle = "#080";
-        circle(20-3, 0, 3, 0, 360);
-        ctx.closePath;
-        ctx.stroke();
-        ctx.fill();
-        
-    }
 
     function draw(timestamp) {
         canvas.width = canvas.width;
-        t_obj = slider1.value/slider_granularity;
+        // cycle = slider1.value;           // FIXME
 
         // calculate time elapsed for animation
         if (start === undefined) start = timestamp;
@@ -196,14 +197,18 @@ function setup() {
         save();
         let T_to_curve = mat3.create();
         mat3.fromTranslation(T_to_curve, [100, 500]);
-        mat3.scale(T_to_curve, T_to_curve, [70, -60]);
+        mat3.scale(T_to_curve, T_to_curve, [70, -70]);
         mult(T_to_curve);
-        // drawAxes("white");
         for(let i = 0; i < pls.length; ++i)
             drawCurve(0, 1, 200, hermite_cubic, T_to_curve, "#bbb", pls[i]);
 
+        // reference grid
+        // drawGrid("white");
+
         // object drawing
         save();
+        t_obj = get_proportion() * pls.length;
+        // console.log(slider1.value, timestamp, start, elapsed, t_obj); // FIXME
 
         // position
         let T_to_obj = mat3.create();
@@ -220,53 +225,16 @@ function setup() {
         mult(T_to_obj);
         mult(T_to_obj_rot);
 
-        // fillrect(-1/10, -1/10, 1/5, 1/5, "tan");        // TODO: replace obj
         roller("tan", "#ddd");
 
         restore();
         restore();
 
-        // window.requestAnimationFrame(draw); TODO
+        window.requestAnimationFrame(draw);
     }
-
     hermiteInit();
-    slider1.addEventListener("input", draw);
-    slider1.max = pls.length*slider_granularity;    // tune slider1.max s.t. it can be used on all Hermite points
-    draw(100);
-    // window.requestAnimationFrame(draw);  TODO
+    // FIXME: input->change of timestamp->get_proportion does not work->t=NaN->DEAD
+    // slider1.addEventListener("input", draw);
+    window.requestAnimationFrame(draw);
 }
 window.onload=setup();
-
-
-
-
-// FIXME: unused functions
-// function Cspiral_tangent(t) {
-//     var R = Rslope * t + Rstart;
-//     var Rprime = Rslope;
-//     var x = Rprime * Math.cos(2.0 * Math.PI * t)
-//             - R * 2.0 * Math.PI * Math.sin(2.0 * Math.PI * t);
-//     var y = Rprime * Math.sin(2.0 * Math.PI * t)
-//             + R * 2.0 * Math.PI * Math.cos(2.0 * Math.PI * t);
-//     return [x,y];
-// }
-
-// function curve0(t) {    // normal parabola
-//     let x = t;
-//     let y = t*t;
-//     return [x, y];
-// }
-
-// function curve1(t) {    // C1 continuity at t=1 to curve0
-//     let x = t;
-//     let y = -t*t + 4*t -2;
-//     return [x, y];
-// }
-
-// function spiral(t) {
-//     let r = 0.3;
-//     var x = t/3 + r*Math.cos(2*Math.PI*t);
-//     var y = r*Math.sin(2*Math.PI*t);
-//     return [x,y];
-// }
-
