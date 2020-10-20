@@ -218,7 +218,7 @@ function setup() {
 
     function drawCurve(t0, t1, granularity, curve, T, color, P) {
         ctx.strokeStyle = color;
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 1;
         ctx.beginPath();
 
         P ? moveTo(curve(hermiteBasis, P, t0), T) : moveTo(curve(t0), T);     // P == null -> not hermite
@@ -253,6 +253,13 @@ function setup() {
         restore();
     }
 
+    function shiftP(diff) {
+        for (let i = 0; i < pls.length; ++i) {
+            pls[i][0][0] += diff;
+            pls[i][3][0] += diff;
+        }
+    }
+
     function draw(timestamp) {
         canvas.width = canvas.width;
         
@@ -270,8 +277,15 @@ function setup() {
         mat3.fromTranslation(T_to_curve, [100, 500]);
         mat3.scale(T_to_curve, T_to_curve, [70, -70]);
         mult(T_to_curve);
-        for(let i = 0; i < pls.length; ++i)
+        for(let i = 0; i < pls.length; ++i)     // curve drawing one by one
             drawCurve(0, 1, 200, hermiteCubic, T_to_curve, "#bbb", pls[i]);
+        
+        // FIXME: double track
+        shiftP(0.1);
+        for(let i = 0; i < pls.length; ++i)     // curve drawing one by one
+            drawCurve(0, 1, 200, hermiteCubic, T_to_curve, "#bbb", pls[i]);
+        shiftP(-0.1);
+        
 
         // reference grid
         // drawGrid("white");
