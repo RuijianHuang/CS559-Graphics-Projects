@@ -76,41 +76,53 @@ function setup() {
         ctx.strokeStyle = strokeColor;
         ctx.beginPath();
 
+        let cLen = 30;
+        let cHei = 10;
+        let dHei = 1;
+        let headR = 4;
+        let dStart = 2;
+
+        save();
+        let T_to_roller_center = mat3.create();
+        mat3.fromTranslation(T_to_roller_center, [-cLen/2, 0]);
+        mult(T_to_roller_center);
+
         // cart
-        fillrect(0, 0, 20, 10, fillColor);
+        fillrect(0, 0, cLen, cHei, fillColor);
         
         // body parts
-        moveTo(10, 10); lineTo(10, 10+4);   // neck
-        moveTo(10, 10); lineTo(10+8, 10+5);
-        moveTo(10, 10); lineTo(10-8, 10+5);
+        moveTo(cLen/2, cHei); lineTo(cLen/2, cHei+headR);   // neck
+        moveTo(cLen/2, cHei); lineTo(cLen/2+8, cHei+5);
+        moveTo(cLen/2, cHei); lineTo(cLen/2-8, cHei+5);
         ctx.stroke();
         ctx.closePath();
         
         // decorations
-        fillrect(2, 4, 15, 2, "#0a0");
+        fillrect(dStart, cHei/2-dHei, cLen-dStart-2, dHei*2, "#0a0");
         
         // head
         ctx.beginPath();
         ctx.fillStyle = "#333";
-        circle(10, 18, 4, 0, 360);
+        circle(cLen/2, cHei+headR*2, headR, 0, 360);
         ctx.closePath();
         ctx.stroke();
         ctx.fill();
         
         // wheels
+        let wheelR = 3;
         ctx.beginPath();
         ctx.fillStyle = "#080";
-        circle(3, 0, 3, 0, 360);
+        circle(wheelR, 0, wheelR, 0, 360);
         ctx.closePath;
         ctx.stroke();
         ctx.fill();
         ctx.beginPath();
         ctx.fillStyle = "#080";
-        circle(20-3, 0, 3, 0, 360);
+        circle(cLen-wheelR, 0, wheelR, 0, 360);
         ctx.closePath;
         ctx.stroke();
         ctx.fill();
-        
+        restore();
     }
 
 
@@ -126,10 +138,12 @@ function setup() {
     } 
 
     function sliderInit() {
-        for(let i = 1; i <= sliderCount; ++i)
+        for(let i = 1; i <= sliderCount; ++i) {
             sliders[i] = (document.getElementById('slider'+i)); 
+            sliders[i].addEventListener("input", draw);
+        }
 
-        sliders[1].value = 60000;
+        sliders[1].value = 40000;
         
         // update 'last value'
         sliderRecord(sliderCount);
@@ -141,25 +155,25 @@ function setup() {
     // hermite related 
     // initialization of a set of Hermite points
     function hermiteInit() {
-        pls[0] = [[0, 0],   [2.5, 0],
-                   [1, 1],   [2, 0]];
+        pls[0] = [[0, 0],   [-1, 1],
+                  [0.8, 1],   [2.5, -0.7]];
 
-        for(let i = 0; i < 9; ++i) {
+        for(let i = 0; i < 8; ++i) {
             let j = i + 2;
             let magnifier = (j <=4 ? j : 10-j) * 10/10;
-            pushHermitePoint([j, magnifier*Math.pow(-1, j-1)], [2*i, 0]);         // TODO: Picassofication awaits
+            pushHermitePoint([j, magnifier*Math.pow(-1, j-1)], [2*i*magnifier, magnifier]);         // TODO: Picassofication awaits
         }
+        
+        pushHermitePoint([11, 1], [1, 3]);
 
         for(let i = 0; i < 5; ++i) {
             let j = i + 10;
-            pushHermitePoint([j+1, 1.5],   [0, 1.5]);       // right
-            pushHermitePoint([j+0.5, 3+i],   [-1.3, 0]);      // upper
-            pushHermitePoint([j, 1.5],     [0, -1.5]);      // left
-            pushHermitePoint([j+1, 0-i],     [2, 0]);         // lower
+            pushHermitePoint([j+0.5, 3+i],   [-i-1.5, 0]);      // upper
+            pushHermitePoint([j+1, 0-i],     [i+2, 0]);         // lower
         }
         
-        pushHermitePoint([10, 5], [-30, 0]);
-        pushHermitePoint([0, 0], [2.5, 0]);
+        pushHermitePoint([10, -2], [-20, 0]);
+        pushHermitePoint([0, 0], [-1, 1]);
         
         // let radius = 3;
         // let start = 270;
@@ -172,7 +186,7 @@ function setup() {
         //     pushHermitePoint([x+0.5, y+3],   [-1.3, 0]);      // upper
         //     pushHermitePoint([x, y+1.5],     [0, -1.5]);      // left
         //     pushHermitePoint([x+1, y+0],     [2, 0]);         // lower
-        //     pushHermitePoint([x+1, y+1.5],   [0, 1.5]);       // right
+        //     pushHermitePoint([x+1, y+1.5],   [0, 1.5]);       // connecting vector
         // }
     }
 
@@ -223,7 +237,7 @@ function setup() {
         // position
         let T_to_obj = mat3.create();
         mat3.fromTranslation(T_to_obj, composite(tObj, hermiteBasis));
-        mat3.scale(T_to_obj, T_to_obj, [1/40, 1/40]);
+        mat3.scale(T_to_obj, T_to_obj, [1/50, 1/50]);
         
         // rotation
         let T_to_obj_rot = mat3.create();
@@ -242,7 +256,8 @@ function setup() {
     function draw(timestamp) {
         canvas.width = canvas.width;
         
-        if (sliderRecord()) cycle = sliders[1].value;
+        // capture slider change and adjust variables
+        if (sliderRecord()) cycle = sliders[1].value;   // only one for now
         
         // calculate time elapsed for animation
         timestamp = Date.now();
@@ -264,16 +279,14 @@ function setup() {
         // roller coaster
         let t_diff = 2.5;
         tObj = getProportionInTime() * pls.length;
-        for (let i in [...Array(3).keys()])
+        for (let i in [...Array(1).keys()])
             positionRoller((tObj+i*t_diff)%pls.length);
-
         restore();                                          // main coordinate system
 
         window.requestAnimationFrame(draw);
     }
     sliderInit();      // put all sliders into array 'sliders' and update last value;
     hermiteInit();
-    slider1.addEventListener("input", draw);
     window.requestAnimationFrame(draw);
 }
 window.onload=setup();
