@@ -88,18 +88,18 @@ function setup() {
             pushHermitePoint([j+1, 0-i],     [2, 0]);         // lower
         }
         
-        let radius = 3;
-        let start = 270;
-        for(let angle = start; angle < 360+start; angle += 360/15) {
-            let center = 10 + 5 + 5;
-            let x = radius * Math.cos(radian(angle)) + center;
-            let y = radius * Math.sin(radian(angle));
-            pushHermitePoint([x+1, y+1.5],   [0, 1.5]);       // right
-            pushHermitePoint([x+0.5, y+3],   [-1.3, 0]);      // upper
-            pushHermitePoint([x, y+1.5],     [0, -1.5]);      // left
-            pushHermitePoint([x+1, y+0],     [2, 0]);         // lower
-            pushHermitePoint([x+1, y+1.5],   [0, 1.5]);       // right
-        }
+        // let radius = 3;
+        // let start = 270;
+        // for(let angle = start; angle < 360+start; angle += 360/15) {
+        //     let center = 10 + 5 + 5;
+        //     let x = radius * Math.cos(radian(angle)) + center;
+        //     let y = radius * Math.sin(radian(angle));
+        //     pushHermitePoint([x+1, y+1.5],   [0, 1.5]);       // right
+        //     pushHermitePoint([x+0.5, y+3],   [-1.3, 0]);      // upper
+        //     pushHermitePoint([x, y+1.5],     [0, -1.5]);      // left
+        //     pushHermitePoint([x+1, y+0],     [2, 0]);         // lower
+        //     pushHermitePoint([x+1, y+1.5],   [0, 1.5]);       // right
+        // }
     }
 
     function hermiteBasis(t) 
@@ -142,6 +142,47 @@ function setup() {
         }
         ctx.stroke();
     }
+    
+    function roller(fillColor, strokeColor) {
+        ctx.strokeStyle = strokeColor;
+        ctx.beginPath();
+
+        // cart
+        fillrect(0, 0, 20, 10, fillColor);
+        
+        // body parts
+        moveTo(10, 10); lineTo(10, 10+4);   // neck
+        moveTo(10, 10); lineTo(10+8, 10+5);
+        moveTo(10, 10); lineTo(10-8, 10+5);
+        ctx.stroke();
+        ctx.closePath();
+        
+        // decorations
+        fillrect(2, 4, 15, 2, "#0a0");
+        
+        // head
+        ctx.beginPath();
+        ctx.fillStyle = "#333";
+        circle(10, 18, 4, 0, 360);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.fill();
+        
+        // wheels
+        ctx.beginPath();
+        ctx.fillStyle = "#080";
+        circle(3, 0, 3, 0, 360);
+        ctx.closePath;
+        ctx.stroke();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.fillStyle = "#080";
+        circle(20-3, 0, 3, 0, 360);
+        ctx.closePath;
+        ctx.stroke();
+        ctx.fill();
+        
+    }
 
     function draw(timestamp) {
         canvas.width = canvas.width;
@@ -155,9 +196,9 @@ function setup() {
         save();
         let T_to_curve = mat3.create();
         mat3.fromTranslation(T_to_curve, [100, 500]);
-        mat3.scale(T_to_curve, T_to_curve, [30, -30]);
+        mat3.scale(T_to_curve, T_to_curve, [70, -60]);
         mult(T_to_curve);
-        drawAxes("white"); // FIXME
+        // drawAxes("white");
         for(let i = 0; i < pls.length; ++i)
             drawCurve(0, 1, 200, hermite_cubic, T_to_curve, "#bbb", pls[i]);
 
@@ -167,6 +208,7 @@ function setup() {
         // position
         let T_to_obj = mat3.create();
         mat3.fromTranslation(T_to_obj, composite(t_obj, hermiteBasis));
+        mat3.scale(T_to_obj, T_to_obj, [1/40, 1/40]);
         
         // rotation
         let T_to_obj_rot = mat3.create();
@@ -178,7 +220,8 @@ function setup() {
         mult(T_to_obj);
         mult(T_to_obj_rot);
 
-        fillrect(-1/10, -1/10, 1/5, 1/5, "tan");        // TODO: replace obj
+        // fillrect(-1/10, -1/10, 1/5, 1/5, "tan");        // TODO: replace obj
+        roller("tan", "#ddd");
 
         restore();
         restore();
