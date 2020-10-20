@@ -49,7 +49,7 @@ function setup() {
         ctx.closePath(); ctx.fill();
     }
 
-    // helper axes FIXME
+    // helper axes 
     function drawAxes(color) {
         ctx.strokeStyle = color;
         ctx.lineWidth=2;
@@ -60,7 +60,7 @@ function setup() {
         ctx.strokeStyle = "#444";
         ctx.lineWidth = 1;
         ctx.beginPath();
-        for (let i = -5; i <= 20; ++i) {
+        for (let i = -10; i <= 50; ++i) {
             moveTo(-10, i); lineTo(30, i);
             moveTo(i, -10); lineTo(i, 30);
         }
@@ -70,22 +70,37 @@ function setup() {
 
     // hermite related 
     // initialization of a set of Hermite points
-    let pls =      [[[0, 0],   [2.5, 0],
-                     [1, 1],   [2, 0]]];
+    let pls = [[[0, 0],   [2.5, 0],
+                [1, 1],   [2, 0]]];
 
-    for(let i = 2; i <= 10; ++i) {
-        let magnifier = (i <=4 ? i : 10-i) * 6/10;
-        pushHermitePoint([i, magnifier*Math.pow(-1, i-1)], [2, 0]);
+    function hermiteInit() {
+        for(let i = 0; i < 9; ++i) {
+            let j = i + 2;
+            let magnifier = (j <=4 ? j : 10-j) * 10/10;
+            pushHermitePoint([j, magnifier*Math.pow(-1, j-1)], [2, 0]);         // TODO: Picassofication awaits
+        }
+        
+        for(let i = 0; i < 5; ++i) {
+            let j = i + 10;
+            pushHermitePoint([j+1, 1.5],   [0, 1.5]);       // right
+            pushHermitePoint([j+0.5, 3+i],   [-1.3, 0]);      // upper
+            pushHermitePoint([j, 1.5],     [0, -1.5]);      // left
+            pushHermitePoint([j+1, 0-i],     [2, 0]);         // lower
+        }
+        
+        let radius = 3;
+        let start = 270;
+        for(let angle = start; angle < 360+start; angle += 360/15) {
+            let center = 10 + 5 + 5;
+            let x = radius * Math.cos(radian(angle)) + center;
+            let y = radius * Math.sin(radian(angle));
+            pushHermitePoint([x+1, y+1.5],   [0, 1.5]);       // right
+            pushHermitePoint([x+0.5, y+3],   [-1.3, 0]);      // upper
+            pushHermitePoint([x, y+1.5],     [0, -1.5]);      // left
+            pushHermitePoint([x+1, y+0],     [2, 0]);         // lower
+            pushHermitePoint([x+1, y+1.5],   [0, 1.5]);       // right
+        }
     }
-
-    // for(let i = 0; i < 3; ++i) {            // ease of adding points
-    //     let j = i + 4;
-    //     pushHermitePoint([j+1, 1.5],   [0, 1.5]);
-    //     pushHermitePoint([j+0.5, 3],   [-1, 0]);
-    //     pushHermitePoint([j, 1.5],     [0, -1.5]);
-    //     pushHermitePoint([j+1, 0],     [1.8, 0]);
-    // }
-    slider1.max = pls.length*slider_granularity;    // tune slider1.max s.t. it can be used on all Hermite points
 
     function hermiteBasis(t) 
     { return [2*t*t*t-3*t*t+1, t*t*t-2*t*t+t, -2*t*t*t+3*t*t, t*t*t-t*t ]; }
@@ -139,8 +154,8 @@ function setup() {
         // curve drawing
         save();
         let T_to_curve = mat3.create();
-        mat3.fromTranslation(T_to_curve, [100, 600]);
-        mat3.scale(T_to_curve, T_to_curve, [50, -50]);
+        mat3.fromTranslation(T_to_curve, [100, 500]);
+        mat3.scale(T_to_curve, T_to_curve, [30, -30]);
         mult(T_to_curve);
         drawAxes("white"); // FIXME
         for(let i = 0; i < pls.length; ++i)
@@ -171,8 +186,9 @@ function setup() {
         // window.requestAnimationFrame(draw); TODO
     }
 
-    
+    hermiteInit();
     slider1.addEventListener("input", draw);
+    slider1.max = pls.length*slider_granularity;    // tune slider1.max s.t. it can be used on all Hermite points
     draw(100);
     // window.requestAnimationFrame(draw);  TODO
 }
