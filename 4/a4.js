@@ -4,28 +4,12 @@ function setup() {
     let slider1 = document.getElementById('slider1');
     slider1.value = 0;
     
+    // global variables
     let stack = [mat3.create()];    // array as stack for save and restore emulation
     let start;                      // mark the start of time
     let elapsed;                    // time elapsed
     let t_obj;                      // record where the obj is
-
-    // Initialization of a set of Hermite points
-    let pls =      [[[0, 0],   [2, 0], 
-                     [1, 1],   [1, 3]]];
-    pushHermitePoint([2, 2.5], [1, 0]);
-    pushHermitePoint([3, 1],   [1, -3]);
-    pushHermitePoint([4, 0],   [1.8, 0]);
-
-    for(let i = 0; i < 3; ++i) {            // ease of adding points
-        let j = i + 4;
-        pushHermitePoint([j+1, 1.5],   [0, 1.5]);
-        pushHermitePoint([j+0.5, 3],   [-1, 0]);
-        pushHermitePoint([j, 1.5],     [0, -1.5]);
-        pushHermitePoint([j+1, 0],     [1.8, 0]);
-    }
-
     let slider_granularity = 1000;
-    slider1.max = pls.length*slider_granularity;
 
     // helper to insert a point into an array in hermite cubic formatting
     function pushHermitePoint(p, d) 
@@ -65,11 +49,52 @@ function setup() {
         ctx.closePath(); ctx.fill();
     }
 
-    function hermite_basis(t) 
+    // helper axes FIXME
+    function drawAxes(color) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth=2;
+        ctx.beginPath();
+        moveTo(30, 0); lineTo(0, 0); lineTo(0, 30);
+        ctx.stroke();
+        
+        ctx.strokeStyle = "#444";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let i = -5; i <= 20; ++i) {
+            moveTo(-10, i); lineTo(30, i);
+            moveTo(i, -10); lineTo(i, 30);
+        }
+        ctx.stroke();
+    }
+
+
+    // hermite related 
+    // initialization of a set of Hermite points
+    let pls =      [[[0, 0],   [2.5, 0],
+                     [1, 1],   [2, 0]]];
+
+    for(let i = 2; i <= 10; ++i) {
+        let magnifier = (i <=4 ? i : 10-i) * 6/10;
+        pushHermitePoint([i, magnifier*Math.pow(-1, i-1)], [2, 0]);
+    }
+
+    // for(let i = 0; i < 3; ++i) {            // ease of adding points
+    //     let j = i + 4;
+    //     pushHermitePoint([j+1, 1.5],   [0, 1.5]);
+    //     pushHermitePoint([j+0.5, 3],   [-1, 0]);
+    //     pushHermitePoint([j, 1.5],     [0, -1.5]);
+    //     pushHermitePoint([j+1, 0],     [1.8, 0]);
+    // }
+    slider1.max = pls.length*slider_granularity;    // tune slider1.max s.t. it can be used on all Hermite points
+
+    function hermiteBasis(t) 
     { return [2*t*t*t-3*t*t+1, t*t*t-2*t*t+t, -2*t*t*t+3*t*t, t*t*t-t*t ]; }
 
-    function hermite_cubic(P,t){
-        let b = hermite_basis(t);
+	function hermiteDerivative(t) 
+    { return [ 6*t*t-6*t, 3*t*t-4*t+1, -6*t*t+6*t, 3*t*t-2*t ]; }
+
+    function hermite_cubic(Basis, P,t){
+        let b = Basis(t);
         let result=vec2.create();
         vec2.scale(result,P[0],b[0]);
         vec2.scaleAndAdd(result,result,P[1],b[1]);
@@ -79,12 +104,12 @@ function setup() {
     }
    
     // switch to different points in defined hermite curve at different t
-    function composite(t) {
+    function composite(t, B) {
         for(let i = 0; i < pls.length; ++i) {
             if (i <= t && t < i+1)    
-                return hermite_cubic(pls[i], t<1 ? t : t%i);
+                return hermite_cubic(B, pls[i], t<1 ? t : t%i);
             else if (t == pls.length) 
-                return hermite_cubic(pls[pls.length-1], 1);
+                return hermite_cubic(B, pls[pls.length-1], 1);
         }
     }
 
@@ -93,11 +118,11 @@ function setup() {
         ctx.lineWidth = 3;
         ctx.beginPath();
 
-        P ? moveTo(curve(P, t0), T) : moveTo(curve(t0), T);     // P == null -> not hermite
+        P ? moveTo(curve(hermiteBasis, P, t0), T) : moveTo(curve(t0), T);     // P == null -> not hermite
         for(let i = 0; i <= granularity; ++i) {
             let p = (granularity - i)/granularity;
             let t = p*t0 + (i/granularity)*t1;
-            let coor = P ? curve(P, t) : curve(t); 
+            let coor = P ? curve(hermiteBasis, P, t) : curve(t); 
             lineTo(coor[0], coor[1]);
         }
         ctx.stroke();
@@ -115,17 +140,30 @@ function setup() {
         save();
         let T_to_curve = mat3.create();
         mat3.fromTranslation(T_to_curve, [100, 600]);
-        mat3.scale(T_to_curve, T_to_curve, [100, -100]);
+        mat3.scale(T_to_curve, T_to_curve, [50, -50]);
         mult(T_to_curve);
+        drawAxes("white"); // FIXME
         for(let i = 0; i < pls.length; ++i)
             drawCurve(0, 1, 200, hermite_cubic, T_to_curve, "#bbb", pls[i]);
 
         // object drawing
         save();
+
+        // position
         let T_to_obj = mat3.create();
-        mat3.fromTranslation(T_to_obj, composite(t_obj));
+        mat3.fromTranslation(T_to_obj, composite(t_obj, hermiteBasis));
+        
+        // rotation
+        let T_to_obj_rot = mat3.create();
+        let tan = composite(t_obj, hermiteDerivative)
+        let angle = Math.atan2(tan[1], tan[0]);
+        mat3.rotate(T_to_obj_rot, T_to_obj_rot, angle);
+
+        // apply transformation
         mult(T_to_obj);
-        fillrect(-1/10, -1/10, 1/5, 1/5, "tan");
+        mult(T_to_obj_rot);
+
+        fillrect(-1/10, -1/10, 1/5, 1/5, "tan");        // TODO: replace obj
 
         restore();
         restore();
