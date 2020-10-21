@@ -1,0 +1,16 @@
+This program makes use of hermite cubics and tons of changeable variables to 
+achieve a roller coaster scene that is somewhat flexible (slightly..).
+
+All curves are connected and achieve C1-continuity (since every point used to 
+build hermite curve are defined in such a way that the coordinates and tangents 
+of two interconnecting curves are equivalent, respectively of course).
+
+The animation can be manipulated by 3 sliders, which do the following:
+    Slider1: add or remove stick men on the roller coaster
+    Slider2: bend the track in a presumably unusual way
+    Slider3: add axes to aid visualization, if one wants to examine quite closely
+
+Sorry the speed of the animation is not adjustable, since my CPU is taking heavy
+toll already at this point.
+
+Enjoy :)

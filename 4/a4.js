@@ -75,56 +75,42 @@ function setup() {
     
     // tiny cart to ride
     function roller(fillColor, strokeColor) {
-        ctx.strokeStyle = strokeColor;
-        ctx.beginPath();
-
-        let cLen = 30;
-        let cHei = 10;
-        let dHei = 1;
-        let headR = 4;
-        let dStart = 2;
-
         save();
+
+        let cLen = 30; let cHei = 10; let dHei = 1; 
+        let headR = 4; let dStart = 2; let wheelR = 3;
+        ctx.strokeStyle = strokeColor; ctx.beginPath();
+
+        // transformation to let the center of cart stay on curve
         let T_to_roller_center = mat3.create();
         mat3.fromTranslation(T_to_roller_center, [-cLen/2, 0]);
         mult(T_to_roller_center);
 
         // cart
         fillrect(0, 0, cLen, cHei, fillColor);
-        
+
         // body parts
         moveTo(cLen/2, cHei); lineTo(cLen/2, cHei+headR);   // neck
         moveTo(cLen/2, cHei); lineTo(cLen/2+8, cHei+5);
         moveTo(cLen/2, cHei); lineTo(cLen/2-8, cHei+5);
         ctx.stroke();
         ctx.closePath();
-        
         // decorations
         fillrect(dStart, cHei/2-dHei, cLen-dStart-2, dHei*2, "#0a0");
-        
+
         // head
-        ctx.beginPath();
-        ctx.lineWidth = 3;
-        ctx.fillStyle = "#333";
+        ctx.beginPath(); ctx.lineWidth = 3; ctx.fillStyle = "#333";
         circle(cLen/2, cHei+headR*2, headR, 0, 360);
-        ctx.closePath();
-        ctx.stroke();
-        ctx.fill();
-        
+        ctx.closePath(); ctx.stroke(); ctx.fill();
+
         // wheels
-        let wheelR = 3;
-        ctx.beginPath();
-        ctx.fillStyle = "#080";
+        ctx.beginPath(); ctx.fillStyle = "#080";
         circle(wheelR, 0, wheelR, 0, 360);
-        ctx.closePath;
-        ctx.stroke();
-        ctx.fill();
-        ctx.beginPath();
-        ctx.fillStyle = "#080";
+        ctx.closePath; ctx.stroke(); ctx.fill();
+        ctx.beginPath(); ctx.fillStyle = "#080";
         circle(cLen-wheelR, 0, wheelR, 0, 360);
-        ctx.closePath;
-        ctx.stroke();
-        ctx.fill();
+        ctx.closePath; ctx.stroke(); ctx.fill();
+
         restore();
     }
 
@@ -143,8 +129,7 @@ function setup() {
         mat3.rotate(T_to_obj_rot, T_to_obj_rot, angle);
 
         // apply transformation
-        mult(T_to_obj);
-        mult(T_to_obj_rot);
+        mult(T_to_obj); mult(T_to_obj_rot);
         roller("tan", "#ddd");
         
         restore();
@@ -155,7 +140,7 @@ function setup() {
         for(let i = 1; i <= sliderCount; ++i)
             if (sliderVals[i] != sliders[i].value) {
                 sliderVals[i] = (sliders[i].value); 
-                if (i == 1) { numPeople = sliders[i].value; console.log("numPeople = ", sliders[i].value); }    // FIXME
+                if (i == 1) { numPeople = sliders[i].value; }
                 if (i == 2) { ridiculousness = sliders[2].value/10000; hermiteInit();}
             }
     } 
@@ -187,7 +172,7 @@ function setup() {
             pushHermitePoint([j, ridiculousness*magnifier*Math.pow(-1, j-1)], [1.5*magnifier*bender, magnifier]);
         }
         
-        pushHermitePoint([9.5, 0], [3, 4]);
+        pushHermitePoint([9.5, 0], [3, 4]);         // connecting point
 
         for(let i = 0; i < 5; ++i) {
             let j = i + 10;
@@ -293,6 +278,12 @@ function setup() {
                 drawCurve(0, 1, 200, hermiteCubic, T_to_curve, "white", pls[i], 2);
             if (track == 1) shiftP(-shift, -shift);
         }
+        
+        // stands
+        ctx.closePath(); ctx.beginPath(); ctx.lineWidth=5;
+        moveTo(9.5, 0); lineTo(9.5-3, -5);
+        moveTo(9.5, 0); lineTo(9.5+3, -5);
+        ctx.stroke();
 
         // reference grid
         if (sliders[3].value == 1)
@@ -303,10 +294,8 @@ function setup() {
         shiftP(shift/2, shift/2);
         tObj = getProportionInTime() * pls.length;
         // for (let i in [...Array(numPeople).keys()]) {
-        for (let i = 0; i < numPeople; ++i) {
-            console.log("people array: ", i);           // FIXME
+        for (let i = 0; i < numPeople; ++i) 
             positionRoller((tObj+i*t_diff)%pls.length);
-        }
         shiftP(-shift/2, -shift/2);
         restore();                                          // main coordinate system
 
