@@ -3,17 +3,19 @@ function setup() {
     let ctx = canvas.getContext('2d');
 
     // input related
-    let sliderCount = 1;            // TODO: add more sliders?
+    let sliderCount = 3;
     let sliders = [];
     let sliderVals = [];
     // animation timing related
     let start;                      // mark the start of time
     let elapsed;                    // time elapsed
-    let cycle;                      // define length of an animation cycle
+    let cycle = 100000;                      // define length of an animation cycle
     // global variables
     let stack = [mat3.create()];    // array as stack for save and restore emulation
-    let pls = [];                        // array containing all points describing the hermite curve
-    let tObj;                      // record where the obj is through parameter t
+    let pls;                        // array containing all points describing the hermite curve
+    let tObj;                       // record where the obj is through parameter t
+    let ridiculousness;             // adjustment of points relative positions
+    let numPeople;                  // #people on the ride
 
     // helper to insert a point into an array in hermite cubic formatting
     function pushHermitePoint(p, d) 
@@ -102,6 +104,7 @@ function setup() {
         
         // head
         ctx.beginPath();
+        ctx.lineWidth = 3;
         ctx.fillStyle = "#333";
         circle(cLen/2, cHei+headR*2, headR, 0, 360);
         ctx.closePath();
@@ -125,16 +128,36 @@ function setup() {
         restore();
     }
 
+    function positionRoller(tObj) {
+        save();
 
-    // record sliders' 2nd last values
-    function sliderRecord() {
-        let changed = false;
+        // position
+        let T_to_obj = mat3.create();
+        mat3.fromTranslation(T_to_obj, composite(tObj, hermiteBasis));
+        mat3.scale(T_to_obj, T_to_obj, [1/50, 1/50]);
+        
+        // rotation
+        let T_to_obj_rot = mat3.create();
+        let tan = composite(tObj, hermiteDerivative)
+        let angle = Math.atan2(tan[1], tan[0]);
+        mat3.rotate(T_to_obj_rot, T_to_obj_rot, angle);
+
+        // apply transformation
+        mult(T_to_obj);
+        mult(T_to_obj_rot);
+        roller("tan", "#ddd");
+        
+        restore();
+    }
+
+    // update variables affected by sliders
+    function sliderUpdate() {
         for(let i = 1; i <= sliderCount; ++i)
             if (sliderVals[i] != sliders[i].value) {
-                sliderVals[i] = (sliders[i].value);
-                changed = true;
+                sliderVals[i] = (sliders[i].value); 
+                if (i == 1) { numPeople = sliders[i].value; console.log("numPeople = ", sliders[i].value); }    // FIXME
+                if (i == 2) { ridiculousness = sliders[2].value/10000; hermiteInit();}
             }
-        return changed;
     } 
 
     function sliderInit() {
@@ -142,52 +165,56 @@ function setup() {
             sliders[i] = (document.getElementById('slider'+i)); 
             sliders[i].addEventListener("input", draw);
         }
-
-        sliders[1].value = 40000;
-        
-        // update 'last value'
-        sliderRecord(sliderCount);
-        
-        // variable init
-        cycle = sliders[1].value;
+        sliders[1].value = sliders[1].min;  // numPeople
+        sliders[2].value = sliders[2].min;  // normal curve to begin with
+        sliders[3].value = 0;               // hide grid [use in draw()]
+        sliderUpdate();
     }
     
     // hermite related 
     // initialization of a set of Hermite points
     function hermiteInit() {
+        pls = [];
         pls[0] = [[0, 0],   [-1, 1],
                   [0.8, 1],   [2.5, -0.7]];
 
+        let magnifier;
+        let bender;
         for(let i = 0; i < 8; ++i) {
             let j = i + 2;
-            let magnifier = (j <=4 ? j : 10-j) * 10/10;
-            pushHermitePoint([j, magnifier*Math.pow(-1, j-1)], [2*i*magnifier, magnifier]);         // TODO: Picassofication awaits
+            magnifier = (j<=4 ? j : 10-j) * ridiculousness + 1;
+            bender = i * ridiculousness + 1;
+            pushHermitePoint([j, ridiculousness*magnifier*Math.pow(-1, j-1)], [1.5*magnifier*bender, magnifier]);
         }
         
-        pushHermitePoint([11, 1], [1, 3]);
+        pushHermitePoint([9.5, 0], [3, 4]);
 
         for(let i = 0; i < 5; ++i) {
             let j = i + 10;
-            pushHermitePoint([j+0.5, 3+i],   [-i-1.5, 0]);      // upper
-            pushHermitePoint([j+1, 0-i],     [i+2, 0]);         // lower
+            magnifier = i * ridiculousness-1;
+            pushHermitePoint([j+0.5, 3+magnifier],   [-magnifier*magnifier*0.8-1.5, 0]);      // upper
+            pushHermitePoint([j+1, 0-magnifier],     [magnifier*magnifier*0.8+2, 0]);         // lower
         }
         
         pushHermitePoint([10, -2], [-20, 0]);
         pushHermitePoint([0, 0], [-1, 1]);
         
-        // let radius = 3;
-        // let start = 270;
-        // for(let angle = start; angle < 360+start; angle += 360/15) {
-        //     let center = 10 + 5;
-        //     let x = radius * Math.cos(radian(angle)) + center;
-        //     let y = radius * Math.sin(radian(angle));
-        //     let i = (angle-start)/(360);
-        //     pushHermitePoint([x+1, y+1.5],   [0, 1.5]);       // right
-        //     pushHermitePoint([x+0.5, y+3],   [-1.3, 0]);      // upper
-        //     pushHermitePoint([x, y+1.5],     [0, -1.5]);      // left
-        //     pushHermitePoint([x+1, y+0],     [2, 0]);         // lower
-        //     pushHermitePoint([x+1, y+1.5],   [0, 1.5]);       // connecting vector
-        // }
+        // untuned loops in a circle
+        /*
+         * let radius = 3;
+         * let start = 270;
+         * for(let angle = start; angle < 360+start; angle += 360/15) {
+         *     let center = 10 + 5;
+         *     let x = radius * Math.cos(radian(angle)) + center;
+         *     let y = radius * Math.sin(radian(angle));
+         *     let i = (angle-start)/(360);
+         *     pushHermitePoint([x+1, y+1.5],   [0, 1.5]);       // right
+         *     pushHermitePoint([x+0.5, y+3],   [-1.3, 0]);      // upper
+         *     pushHermitePoint([x, y+1.5],     [0, -1.5]);      // left
+         *     pushHermitePoint([x+1, y+0],     [2, 0]);         // lower
+         *     pushHermitePoint([x+1, y+1.5],   [0, 1.5]);       // connecting vector
+         * }
+         */
     }
 
     function hermiteBasis(t) 
@@ -216,9 +243,9 @@ function setup() {
         }
     }
 
-    function drawCurve(t0, t1, granularity, curve, T, color, P) {
+    function drawCurve(t0, t1, granularity, curve, T, color, P, thickness) {
         ctx.strokeStyle = color;
-        ctx.lineWidth = 1;
+        ctx.lineWidth = thickness;
         ctx.beginPath();
 
         P ? moveTo(curve(hermiteBasis, P, t0), T) : moveTo(curve(t0), T);     // P == null -> not hermite
@@ -231,40 +258,20 @@ function setup() {
         ctx.stroke();
     }
 
-    function positionRoller(tObj) {
-        save();
-
-        // position
-        let T_to_obj = mat3.create();
-        mat3.fromTranslation(T_to_obj, composite(tObj, hermiteBasis));
-        mat3.scale(T_to_obj, T_to_obj, [1/50, 1/50]);
-        
-        // rotation
-        let T_to_obj_rot = mat3.create();
-        let tan = composite(tObj, hermiteDerivative)
-        let angle = Math.atan2(tan[1], tan[0]);
-        mat3.rotate(T_to_obj_rot, T_to_obj_rot, angle);
-
-        // apply transformation
-        mult(T_to_obj);
-        mult(T_to_obj_rot);
-        roller("tan", "#ddd");
-        
-        restore();
-    }
-
-    function shiftP(diff) {
-        for (let i = 0; i < pls.length; ++i) {
-            pls[i][0][0] += diff;
-            pls[i][3][0] += diff;
+    function shiftP(x, y) {
+        for (let i = 1; i < pls.length; ++i) {
+            pls[i][0][0] += x;
+            pls[i][3][0] += x;
+            pls[i][0][1] += y;
+            pls[i][3][1] += y;
         }
     }
 
     function draw(timestamp) {
         canvas.width = canvas.width;
         
-        // capture slider change and adjust variables
-        if (sliderRecord()) cycle = sliders[1].value;   // only one for now
+        // capture changes and update related variables
+        sliderUpdate();
         
         // calculate time elapsed for animation
         timestamp = Date.now();
@@ -274,33 +281,38 @@ function setup() {
         // curve drawing
         save();                                             // main coordinate system
         let T_to_curve = mat3.create();
-        mat3.fromTranslation(T_to_curve, [100, 500]);
-        mat3.scale(T_to_curve, T_to_curve, [70, -70]);
+        mat3.fromTranslation(T_to_curve, [100, 450]);
+        mat3.scale(T_to_curve, T_to_curve, [55, -55]);
         mult(T_to_curve);
-        for(let i = 0; i < pls.length; ++i)     // curve drawing one by one
-            drawCurve(0, 1, 200, hermiteCubic, T_to_curve, "#bbb", pls[i]);
         
-        // FIXME: double track
-        shiftP(0.1);
-        for(let i = 0; i < pls.length; ++i)     // curve drawing one by one
-            drawCurve(0, 1, 200, hermiteCubic, T_to_curve, "#bbb", pls[i]);
-        shiftP(-0.1);
-        
+        // curve drawing one by one FIXME: more than one track really takes toll on CPU/GPU
+        let shift = 0.04;
+        for(let track = 0; track <= 1; ++track) {
+            if (track == 1) shiftP(shift, shift);
+            for(let i = 0; i < pls.length; ++i)
+                drawCurve(0, 1, 200, hermiteCubic, T_to_curve, "white", pls[i], 2);
+            if (track == 1) shiftP(-shift, -shift);
+        }
 
         // reference grid
-        // drawGrid("white");
+        if (sliders[3].value == 1)
+            drawGrid("white");
 
         // roller coaster
         let t_diff = 2.5;
+        shiftP(shift/2, shift/2);
         tObj = getProportionInTime() * pls.length;
-        for (let i in [...Array(1).keys()])
+        // for (let i in [...Array(numPeople).keys()]) {
+        for (let i = 0; i < numPeople; ++i) {
+            console.log("people array: ", i);           // FIXME
             positionRoller((tObj+i*t_diff)%pls.length);
+        }
+        shiftP(-shift/2, -shift/2);
         restore();                                          // main coordinate system
 
         window.requestAnimationFrame(draw);
     }
     sliderInit();      // put all sliders into array 'sliders' and update last value;
-    hermiteInit();
     window.requestAnimationFrame(draw);
 }
 window.onload=setup();
