@@ -151,7 +151,7 @@ function setup() {
             sliders[i].addEventListener("input", draw);
         }
         sliders[1].value = sliders[1].min;  // numPeople
-        sliders[2].value = sliders[2].min;  // normal curve to begin with
+        sliders[2].value = sliders[2].middle;  // normal curve to begin with
         sliders[3].value = 0;               // hide grid [use in draw()]
         sliderUpdate();
     }
@@ -181,7 +181,7 @@ function setup() {
             pushHermitePoint([j+1, 0-magnifier],     [magnifier*magnifier*0.8+2, 0]);         // lower
         }
         
-        pushHermitePoint([10, -2], [-20, 0]);
+        pushHermitePoint([10, -0], [-20, 0]);
         pushHermitePoint([0, 0], [-1, 1]);
         
         // untuned loops in a circle
@@ -270,24 +270,24 @@ function setup() {
         mat3.scale(T_to_curve, T_to_curve, [55, -55]);
         mult(T_to_curve);
         
+        // reference grid
+        if (sliders[3].value == 1) drawGrid("white");
+
+        // stands
+        ctx.strokeStyle = "#5A6266";
+        ctx.closePath(); ctx.beginPath(); ctx.lineWidth=5;
+        moveTo(9.5, 0); lineTo(9.5-3, -4.3);
+        moveTo(9.5, 0); lineTo(9.5+3, -4.3);
+        ctx.stroke(); ctx.lineWidth=2;
+        
         // curve drawing one by one FIXME: more than one track really takes toll on CPU/GPU
         let shift = 0.04;
-        for(let track = 0; track <= 1; ++track) {
+        for(let track = 0; track < 1; ++track) {
             if (track == 1) shiftP(shift, shift);
             for(let i = 0; i < pls.length; ++i)
                 drawCurve(0, 1, 200, hermiteCubic, T_to_curve, "white", pls[i], 2);
             if (track == 1) shiftP(-shift, -shift);
         }
-        
-        // stands
-        ctx.closePath(); ctx.beginPath(); ctx.lineWidth=5;
-        moveTo(9.5, 0); lineTo(9.5-3, -5);
-        moveTo(9.5, 0); lineTo(9.5+3, -5);
-        ctx.stroke();
-
-        // reference grid
-        if (sliders[3].value == 1)
-            drawGrid("white");
 
         // roller coaster
         let t_diff = 2.5;
@@ -297,6 +297,7 @@ function setup() {
         for (let i = 0; i < numPeople; ++i) 
             positionRoller((tObj+i*t_diff)%pls.length);
         shiftP(-shift/2, -shift/2);
+
         restore();                                          // main coordinate system
 
         window.requestAnimationFrame(draw);
