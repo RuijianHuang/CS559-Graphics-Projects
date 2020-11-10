@@ -22,13 +22,13 @@ function setup() {
     // camera definition
     let viewAngle;
     let locCamera = vec3.create();
-    let distCamera = 400.0;
+    let distCamera = 500.0;
     let T_look_at = mat4.create();
     
     function lookAtUpdate() {
-        locCamera[0] = distCamera * Math.sin(viewAngle);
+        locCamera[0] = distCamera * Math.sin(radian(viewAngle));
         locCamera[1] = 100;
-        locCamera[2] = distCamera * Math.cos(viewAngle);
+        locCamera[2] = distCamera * Math.cos(radian(viewAngle));
         mat4.lookAt(T_look_at, locCamera, [0, 0, 0], [0, 1, 0]);
     }
 
@@ -60,7 +60,7 @@ function setup() {
     { let pt = vec3.create(); vec3.transformMat4(pt, loc, stack[0]); ctx.lineTo(pt[0], pt[1]); }
 
     // arc wrapper (start/end slightly differ from original)     FIXME?
-    function circle(x, y, radius, start, end) 
+    function circle_xy(x, y, radius, start, end) 
     { for (let a = start; a < end; ++a) lineTo(x+radius*Math.cos(radian(a)), y+radius*Math.sin(radian(a))); }
     
     // fillRect wrapper w/ color    FIXME?
@@ -71,11 +71,11 @@ function setup() {
     }
 
     // helper axes 
-    function drawGrid(color) {
+    function drawGrid(color, size) {
         // maximum range in x, y, z axes
-        let x = [-10, 20]; let x_step = 5;
-        let y = [-10, 20]; let y_step = 5;
-        let z = [-5, 10];   let z_step = 3;
+        let x = [-size, size]; let x_step = size/3;
+        let y = [-size, size]; let y_step = size/3;
+        let z = [-size, size]; let z_step = size/3;
 
         ctx.strokeStyle = color;
         ctx.lineWidth=2;
@@ -85,7 +85,7 @@ function setup() {
         moveTo([0, 0, z[0]]); lineTo([0, 0, z[1]]);
         ctx.stroke();
 
-        ctx.strokeStyle = "#666";
+        ctx.strokeStyle = "#222";
         ctx.lineWidth = 1;
         ctx.beginPath();
         for (let zz = z[0]; zz <= z[1]; zz += z_step) {
@@ -169,11 +169,9 @@ function setup() {
             if (sliderVals[i] != sliders[i].value) {
                 sliderVals[i] = (sliders[i].value); 
                 if (i == 0) {
-                    viewAngle = radian(sliders[0].value);
+                    viewAngle = parseInt(sliders[0].value);
                     lookAtUpdate();
                 }
-                // if (i == 1) { numPeople = sliders[i].value; }
-                // if (i == 2) { ridiculousness = sliders[2].value/10000; hermiteInit();}
             }
     }
 
@@ -183,37 +181,129 @@ function setup() {
             sliders[i].addEventListener("input", draw);
         }
         sliders[0].value = 0;                         // FIXME: manually adjustable viewAngle for now
-        // sliders[1].value = sliders[1].min;  // numPeople
-        // sliders[2].value = sliders[2].middle;  // normal curve to begin with
-        // sliders[3].value = 0;               // hide grid [use in draw()]
         sliderUpdate();
     }
     
+    let floorRadiusRange = [3/3, 10/3];
+    function getFloorRadius(floor, maxFloor, midFloor) { 
+        let r; 
+        let min=floorRadiusRange[0]; 
+        let range=floorRadiusRange[1]-floorRadiusRange[0];
+        if (floor >= midFloor) r = min + range*(floor-midFloor)/(maxFloor-midFloor);
+        else r = min + range*(midFloor-floor)/(maxFloor-(maxFloor-midFloor));
+        return r;
+    }
+
+    function drawBuilding(maxFloor, midFloor, strokeColor, fillColor, roofColor) {
+        let floorRadius;
+        let rad;
+        let startAngle = 90; 
+        let angleJump = 360/30;
+        let x; let y; let z;
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = 2;
+        
+        var isInvisible = function(angle) {
+            let compareAngle = Math.abs(angle-startAngle);
+            return compareAngle < viewAngle-90 | (compareAngle > viewAngle+90 && compareAngle < viewAngle+270);
+        }
+        
+        var bottomToMiddle = function(angle) {
+            ctx.beginPath();
+            rad=radian(angle);
+            x = floorRadiusRange[1]*Math.cos(rad);  // from the pt at floor 0, at this angle
+            z = floorRadiusRange[1]*Math.sin(rad);
+            moveTo([x, 0, z]);
+            x = floorRadiusRange[0]*Math.cos(rad);  // to the pt at midFloor,  at this angle
+            z = floorRadiusRange[0]*Math.sin(rad);
+            lineTo([x, maxFloor-midFloor, z]);
+            rad=radian(angle+angleJump);
+            x = floorRadiusRange[0]*Math.cos(rad);  // to the pt at midFloor,  at the next angle
+            z = floorRadiusRange[0]*Math.sin(rad);
+            lineTo([x, maxFloor-midFloor, z]);
+            x = floorRadiusRange[1]*Math.cos(rad);  // to the pt at floor 0,   at next angle
+            z = floorRadiusRange[1]*Math.sin(rad);
+            lineTo([x, 0, z]);
+            ctx.closePath();
+            ctx.stroke(); ctx.fillStyle = fillColor; ctx.fill();
+        }
+        
+        var middleToTop = function(angle) {
+            rad=radian(angle);
+            x = floorRadiusRange[0]*Math.cos(rad);  // from the pt at midFloor, at this angle
+            z = floorRadiusRange[0]*Math.sin(rad);
+            moveTo([x, maxFloor-midFloor, z]);
+            x = floorRadiusRange[1]*Math.cos(rad);  // to the pt at maxFloor,  at this angle
+            z = floorRadiusRange[1]*Math.sin(rad);
+            lineTo([x, maxFloor, z]);
+            rad=radian(angle+angleJump);
+            x = floorRadiusRange[1]*Math.cos(rad);  // to the pt at maxFloor,  at the next angle
+            z = floorRadiusRange[1]*Math.sin(rad);
+            lineTo([x, maxFloor, z]);
+            x = floorRadiusRange[0]*Math.cos(rad);  // to the pt at midFloor,  at next angle
+            z = floorRadiusRange[0]*Math.sin(rad);
+            lineTo([x, maxFloor-midFloor, z]);
+            ctx.closePath();
+            ctx.stroke(); ctx.fillStyle = fillColor; ctx.fill();
+            
+        }
+
+        // color the body first
+        for (let angle = startAngle; angle >= startAngle-360; angle -= angleJump) {
+            if (isInvisible(angle)) continue;
+            bottomToMiddle(angle);
+            middleToTop(angle);
+        }
+
+        // then draw some contours of floors
+        for (let floor = maxFloor; floor >= 0; floor--) {
+            y = maxFloor-floor;
+            floorRadius = getFloorRadius(floor, maxFloor, midFloor);
+
+            ctx.beginPath();
+            let startRadian = radian(startAngle);
+            moveTo([floorRadius*Math.cos(startRadian), y, floorRadius*Math.sin(startRadian)]);
+            for (let angle = startAngle; angle >= startAngle-360; angle -= angleJump) {
+                rad = radian(angle)
+                x = floorRadius*Math.cos(rad);
+                z = floorRadius*Math.sin(rad);
+                if (floor == 0) {
+                    lineTo([x, y, z]);
+                } else {
+                    if (isInvisible(angle)) moveTo([x, y, z]);
+                    else lineTo([x, y, z]);
+                }
+            }
+            if (floor == 0) { ctx.fillStyle = roofColor; ctx.fill(); ctx.closePath(); }
+            ctx.stroke();
+        }
+    }
+
+    function positionBuildings(distance) {
+        let maxFloor = 14, midFloor = 3;
+        let strokeColor = "#262", bodyColor = "#000", roofColor = "#84735a";
+
+        save();
+        let T_to_left_building =mat4.create();
+        mat4.fromTranslation(T_to_left_building, [-distance/2, 0, 0]);
+        mult(T_to_left_building);
+        drawBuilding(maxFloor, midFloor, strokeColor, bodyColor, roofColor);
+        restore();
+
+        save();
+        let T_to_right_building =mat4.create();
+        mat4.fromTranslation(T_to_right_building, [distance/2, 0, 0]);
+        mult(T_to_right_building);
+        drawBuilding(maxFloor, midFloor, strokeColor, bodyColor, roofColor);
+        restore();
+    }
+
     // hermite related 
     // initialization of a set of Hermite points
     function hermiteInit() {
         pls = [];
         pls[0] = [[0, 0],   [-1, 1],
                   [0.8, 1],   [2.5, -0.7]];
-
-        let magnifier;
-        let bender;
-        for(let i = 0; i < 8; ++i) {
-            let j = i + 2;
-            magnifier = (j<=4 ? j : 10-j) * ridiculousness + 1;
-            bender = i * ridiculousness + 1;
-            pushHermitePoint([j, ridiculousness*magnifier*Math.pow(-1, j-1)], [1.5*magnifier*bender, magnifier]);
-        }
-        
-        pushHermitePoint([9.5, 0], [3, 4]);         // connecting point
-
-        for(let i = 0; i < 5; ++i) {
-            let j = i + 10;
-            magnifier = i * ridiculousness-1;
-            pushHermitePoint([j+0.5, 3+magnifier],   [-magnifier*magnifier*0.8-1.5, 0]);      // upper
-            pushHermitePoint([j+1, 0-magnifier],     [magnifier*magnifier*0.8+2, 0]);         // lower
-        }
-        
         pushHermitePoint([10, -0], [-20, 0]);
         pushHermitePoint([0, 0], [-1, 1]);
     }
@@ -259,14 +349,14 @@ function setup() {
         ctx.stroke();
     }
 
-    function shiftP(x, y) {
-        for (let i = 1; i < pls.length; ++i) {
-            pls[i][0][0] += x;
-            pls[i][3][0] += x;
-            pls[i][0][1] += y;
-            pls[i][3][1] += y;
-        }
-    }
+    // function shiftP(x, y) {
+    //     for (let i = 1; i < pls.length; ++i) {
+    //         pls[i][0][0] += x;
+    //         pls[i][3][0] += x;
+    //         pls[i][0][1] += y;
+    //         pls[i][3][1] += y;
+    //     }
+    // }
 
     function draw(timestamp) {
         canvas.width = canvas.width;
@@ -282,15 +372,15 @@ function setup() {
         // curve drawing
         save();                                             // main coordinate system
         let T_to_curve = mat4.create();
-        let scale = 30;
-        mat4.fromTranslation(T_to_curve, [400, 450, 0]);
+        let scale = 40;
+        mat4.fromTranslation(T_to_curve, [canvas.width/2, canvas.width/2, 0]);
         mat4.scale(T_to_curve, T_to_curve, [scale, -scale, -scale]);
-        mult(T_look_at);
-        mult(T_to_curve);
+        mult(T_to_curve); mult(T_look_at);
         
-        // reference grid TODO: possbly a 3D grid?
+        // reference grid 
         // if (sliders[3].value == 1) drawGrid("white");
-        drawGrid("white");
+        drawGrid("white", 30); // TODO: slider control?
+        positionBuildings(25);
 
         // curve drawing one by one
         // let shift = 0.04;
