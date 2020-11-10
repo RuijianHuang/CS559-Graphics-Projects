@@ -24,17 +24,13 @@ function setup() {
     let locCamera = vec3.create();
     let distCamera = 500.0;
     let T_look_at = mat4.create();
-    
+
     function lookAtUpdate() {
         locCamera[0] = distCamera * Math.sin(radian(viewAngle));
         locCamera[1] = 100;
         locCamera[2] = distCamera * Math.cos(radian(viewAngle));
         mat4.lookAt(T_look_at, locCamera, [0, 0, 0], [0, 1, 0]);
     }
-
-    // helper to insert a point into an array in hermite cubic formatting
-    function pushHermitePoint(p, d) 
-    { let last = pls[pls.length-1]; pls.push([last[2], last[3], p, d]); }
 
     // current time elapsed proportional to a cycle
     function getProportionInTime() { return elapsed%cycle/cycle; }
@@ -248,6 +244,29 @@ function setup() {
             
         }
 
+        var helipad = function(color) {
+            let r = 2.5; moveTo([r, maxFloor, 0]);
+            for (let angle=0; angle<=360; angle+=angleJump)
+            { lineTo([r*Math.cos(radian(angle)), maxFloor, r*Math.sin(radian(angle))]); }
+            ctx.closePath(); ctx.strokeStyle = color; ctx.stroke();
+
+            save();
+            let T_h_resize = mat4.create();
+            mat4.scale(T_h_resize, T_h_resize, [0.35, 1, 0.2]);
+            mult(T_h_resize);
+            ctx.beginPath(); 
+            ctx.beginPath();
+            moveTo([-3, maxFloor, 1]);  lineTo([3, maxFloor, 1]);
+            lineTo([3, maxFloor, 7]);   lineTo([5, maxFloor, 7]);
+            lineTo([5, maxFloor, -7]);  lineTo([3, maxFloor, -7]);
+            lineTo([3, maxFloor, -1]);  lineTo([-3, maxFloor, -1]);
+            lineTo([-3, maxFloor, -7]); lineTo([-5, maxFloor, -7]);
+            lineTo([-5, maxFloor, 7]);  lineTo([-3, maxFloor, 7]);
+            ctx.closePath();
+            ctx.fillStyle = color; ctx.fill();
+            restore();
+        }
+
         // color the body first
         for (let angle = startAngle; angle >= startAngle-360; angle -= angleJump) {
             if (isInvisible(angle)) continue;
@@ -274,11 +293,17 @@ function setup() {
                     else lineTo([x, y, z]);
                 }
             }
-            if (floor == 0) { ctx.fillStyle = roofColor; ctx.fill(); ctx.closePath(); }
             ctx.stroke();
+
+            // top floor decoration
+            if (floor == 0) { 
+                ctx.fillStyle = roofColor; ctx.fill(); ctx.closePath(); 
+                helipad("#000");        // additional ring and a "H"
+            }
         }
     }
 
+    // multiple building manipulation in hierarchy
     function positionBuildings(distance) {
         let maxFloor = 14, midFloor = 3;
         let strokeColor = "#262", bodyColor = "#000", roofColor = "#84735a";
@@ -301,11 +326,19 @@ function setup() {
     // hermite related 
     // initialization of a set of Hermite points
     function hermiteInit() {
+
+        // helper to insert a point into an array in hermite cubic formatting
+        let pushHermitePoint = function(p, d) 
+        { let last = pls[pls.length-1]; pls.push([last[2], last[3], p, d]); }
+
         pls = [];
-        pls[0] = [[0, 0],   [-1, 1],
-                  [0.8, 1],   [2.5, -0.7]];
-        pushHermitePoint([10, -0], [-20, 0]);
-        pushHermitePoint([0, 0], [-1, 1]);
+        // pls[0] = [[0, 0, 0],   [-1, 1, 0],
+        //           [0.8, 1, 0],   [2.5, -0.7, 0]];
+        // pushHermitePoint([10, -0, 0], [-20, 0, 0]);
+        // pushHermitePoint([0, 0, 0], [-1, 1]);
+        pls[0] = [[-15/2+10/3, 14, 0], [3, -1, 0],
+                  [0, 10, 0], [8, 0, 0]];
+        pushHermitePoint([-15/2-10/3, 14, 0], [3, 1, 0]);
     }
 
     function hermiteBasis(t) 
@@ -381,6 +414,11 @@ function setup() {
         // if (sliders[3].value == 1) drawGrid("white");
         drawGrid("white", 30); // TODO: slider control?
         positionBuildings(25);
+        
+        // FIXME
+        hermiteInit();
+        for (let i = 0; i < pls.length; ++i)
+            drawCurve(0, 1, 200, hermiteCubic, stack[0], "white", pls[i], 2);
 
         // curve drawing one by one
         // let shift = 0.04;
