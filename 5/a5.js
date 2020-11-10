@@ -323,40 +323,6 @@ function setup() {
         restore();
     }
 
-    // hermite related 
-    // initialization of a set of Hermite points
-    function hermiteInit() {
-
-        // helper to insert a point into an array in hermite cubic formatting
-        let pushHermitePoint = function(p, d) 
-        { let last = pls[pls.length-1]; pls.push([last[2], last[3], p, d]); }
-
-        pls = [];
-        // pls[0] = [[0, 0, 0],   [-1, 1, 0],
-        //           [0.8, 1, 0],   [2.5, -0.7, 0]];
-        // pushHermitePoint([10, -0, 0], [-20, 0, 0]);
-        // pushHermitePoint([0, 0, 0], [-1, 1]);
-        pls[0] = [[-15/2+10/3, 14, 0], [3, -1, 0],
-                  [0, 10, 0], [8, 0, 0]];
-        pushHermitePoint([-15/2-10/3, 14, 0], [3, 1, 0]);
-    }
-
-    function hermiteBasis(t) 
-    { return [2*t*t*t-3*t*t+1, t*t*t-2*t*t+t, -2*t*t*t+3*t*t, t*t*t-t*t ]; }
-
-	function hermiteDerivative(t) 
-    { return [ 6*t*t-6*t, 3*t*t-4*t+1, -6*t*t+6*t, 3*t*t-2*t ]; }
-
-    function hermiteCubic(Basis, P,t){
-        let b = Basis(t);
-        let result=vec2.create();
-        vec2.scale(result,P[0],b[0]);
-        vec2.scaleAndAdd(result,result,P[1],b[1]);
-        vec2.scaleAndAdd(result,result,P[2],b[2]);
-        vec2.scaleAndAdd(result,result,P[3],b[3]);
-        return result;
-    }
-   
     // switch to different points in defined hermite curve at different t
     function composite(t, B) {
         for(let i = 0; i < pls.length; ++i) {
@@ -366,6 +332,37 @@ function setup() {
                 return hermiteCubic(B, pls[pls.length-1], 1);
         }
     }
+
+    // hermite related 
+    // initialization of a set of Hermite points
+    function hermiteInit() {
+
+        // helper to insert a point into an array in hermite cubic formatting
+        let pushHermitePoint = function(p, d) 
+        { let last = pls[pls.length-1]; pls.push([last[2], last[3], p, d]); }
+
+        pls = [];
+        pls[0] = [[-15/2+10/3, 14, 0], [3, -1, 0],
+                  [0, 10, 0], [8, 0, 0]];
+        pushHermitePoint([-15/2-10/3, 14, 0], [3, 1, 0]);
+    }
+
+    function hermiteCubic(Basis, P,t){
+        let b = Basis(t);
+        let result=vec2.create();
+        vec3.scale(result,P[0],b[0]);
+        vec3.scaleAndAdd(result,result,P[1],b[1]);
+        vec3.scaleAndAdd(result,result,P[2],b[2]);
+        vec3.scaleAndAdd(result,result,P[3],b[3]);
+        return result;
+    }
+   
+    function hermiteBasis(t) 
+    { return [2*t*t*t-3*t*t+1, t*t*t-2*t*t+t, -2*t*t*t+3*t*t, t*t*t-t*t ]; }
+
+	function hermiteDerivative(t) 
+    { return [ 6*t*t-6*t, 3*t*t-4*t+1, -6*t*t+6*t, 3*t*t-2*t ]; }
+
 
     function drawCurve(t0, t1, granularity, curve, T, color, P, thickness) {
         ctx.strokeStyle = color;
@@ -381,15 +378,6 @@ function setup() {
         }
         ctx.stroke();
     }
-
-    // function shiftP(x, y) {
-    //     for (let i = 1; i < pls.length; ++i) {
-    //         pls[i][0][0] += x;
-    //         pls[i][3][0] += x;
-    //         pls[i][0][1] += y;
-    //         pls[i][3][1] += y;
-    //     }
-    // }
 
     function draw(timestamp) {
         canvas.width = canvas.width;
@@ -408,7 +396,12 @@ function setup() {
         let scale = 40;
         mat4.fromTranslation(T_to_curve, [canvas.width/2, canvas.width/2, 0]);
         mat4.scale(T_to_curve, T_to_curve, [scale, -scale, -scale]);
-        mult(T_to_curve); mult(T_look_at);
+        mult(T_to_curve); 
+        
+        let T_projection = mat4.create();
+        mat4.ortho(T_projection, -1, 1, -1, 1, -1, 1);          // FIXME: orthographic?
+        mat4.multiply(T_projection, T_projection, T_look_at);
+        mult(T_projection);
         
         // reference grid 
         // if (sliders[3].value == 1) drawGrid("white");
@@ -418,7 +411,7 @@ function setup() {
         // FIXME
         hermiteInit();
         for (let i = 0; i < pls.length; ++i)
-            drawCurve(0, 1, 200, hermiteCubic, stack[0], "white", pls[i], 2);
+            drawCurve(0, 1, 200, hermiteCubic, T_look_at, "white", pls[i], 2);
 
         // curve drawing one by one
         // let shift = 0.04;
