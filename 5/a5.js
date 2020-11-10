@@ -16,8 +16,6 @@ function setup() {
     let stack = [mat4.create()];    // array as stack for save and restore emulation
     let pls;                        // array containing all points describing the hermite curve
     let tObj;                       // record where the obj is through parameter t  FIXME
-    let ridiculousness;             // adjustment of points relative positions
-    let numPeople;                  // #people on the ride  FIXME
     
     // camera definition
     let viewAngle;
@@ -27,7 +25,7 @@ function setup() {
 
     function lookAtUpdate() {
         locCamera[0] = distCamera * Math.sin(radian(viewAngle));
-        locCamera[1] = 100;
+        locCamera[1] = 150;
         locCamera[2] = distCamera * Math.cos(radian(viewAngle));
         mat4.lookAt(T_look_at, locCamera, [0, 0, 0], [0, 1, 0]);
     }
@@ -54,17 +52,6 @@ function setup() {
     // function to draw to a pt in ctx using glmatrix
     function lineTo(loc) 
     { let pt = vec3.create(); vec3.transformMat4(pt, loc, stack[0]); ctx.lineTo(pt[0], pt[1]); }
-
-    // arc wrapper (start/end slightly differ from original)     FIXME?
-    function circle_xy(x, y, radius, start, end) 
-    { for (let a = start; a < end; ++a) lineTo(x+radius*Math.cos(radian(a)), y+radius*Math.sin(radian(a))); }
-    
-    // fillRect wrapper w/ color    FIXME?
-    function fillrect(x, y, w, h, color) {
-        ctx.fillStyle = color; ctx.beginPath();
-        moveTo(x, y); lineTo(x+w, y); lineTo(x+w, y+h); lineTo(x, y+h);
-        ctx.closePath(); ctx.fill();
-    }
 
     // helper axes 
     function drawGrid(color, size) {
@@ -96,90 +83,64 @@ function setup() {
         }
         ctx.stroke();
     }
-    
-    // tiny cart to ride FIXME?
-    // function roller(fillColor, strokeColor) {
-    //     save();
 
-    //     let cLen = 30; let cHei = 10; let dHei = 1;
-    //     let headR = 4; let dStart = 2; let wheelR = 3;
-    //     ctx.strokeStyle = strokeColor; ctx.beginPath();
+    // initialization of a set of Hermite points
+    function hermiteInit(distance, maxFloor) {
+        // helper to insert a point into an array in hermite cubic formatting
+        let pushHermitePoint = function(p, d) 
+        { let last = pls[pls.length-1]; pls.push([last[2], last[3], p, d]); }
 
-    //     // transformation to let the center of cart stay on curve
-    //     let T_to_roller_center = mat3.create();
-    //     mat3.fromTranslation(T_to_roller_center, [-cLen/2, 0]);
-    //     mult(T_to_roller_center);
+        let prop = viewAngle/360;
+        let edgeX = distance/2-floorRadiusRange[1];
+        let centerX = prop>0.5 ? (prop-0.5)/0.5*edgeX : -(0.5-prop)*edgeX*2;
 
-    //     // cart
-    //     fillrect(0, 0, cLen, cHei, fillColor);
-
-    //     // body parts
-    //     moveTo(cLen/2, cHei); lineTo(cLen/2, cHei+headR);   // neck
-    //     moveTo(cLen/2, cHei); lineTo(cLen/2+8, cHei+5);
-    //     moveTo(cLen/2, cHei); lineTo(cLen/2-8, cHei+5);
-    //     ctx.stroke();
-    //     ctx.closePath();
-    //     // decorations
-    //     fillrect(dStart, cHei/2-dHei, cLen-dStart-2, dHei*2, "#0a0");
-
-    //     // head
-    //     ctx.beginPath(); ctx.lineWidth = 3; ctx.fillStyle = "#333";
-    //     circle(cLen/2, cHei+headR*2, headR, 0, 360);
-    //     ctx.closePath(); ctx.stroke(); ctx.fill();
-
-    //     // wheels
-    //     ctx.beginPath(); ctx.fillStyle = "#080";
-    //     circle(wheelR, 0, wheelR, 0, 360);
-    //     ctx.closePath; ctx.stroke(); ctx.fill();
-    //     ctx.beginPath(); ctx.fillStyle = "#080";
-    //     circle(cLen-wheelR, 0, wheelR, 0, 360);
-    //     ctx.closePath; ctx.stroke(); ctx.fill();
-
-    //     restore();
-    // }
-
-    // function positionRoller(tObj) {
-    //     save();
-
-    //     // position
-    //     let T_to_obj = mat3.create();
-    //     mat3.fromTranslation(T_to_obj, composite(tObj, hermiteBasis));
-    //     mat3.scale(T_to_obj, T_to_obj, [1/50, 1/50]);
-
-    //     // rotation
-    //     let T_to_obj_rot = mat3.create();
-    //     let tan = composite(tObj, hermiteDerivative)
-    //     let angle = Math.atan2(tan[1], tan[0]);
-    //     mat3.rotate(T_to_obj_rot, T_to_obj_rot, angle);
-
-    //     // apply transformation
-    //     mult(T_to_obj); mult(T_to_obj_rot);
-    //     roller("tan", "#ddd");
-
-    //     restore();
-    // }
-
-    // update variables affected by sliders
-    function sliderUpdate() {
-        for(let i = 0; i < sliderCount; ++i)
-            if (sliderVals[i] != sliders[i].value) {
-                sliderVals[i] = (sliders[i].value); 
-                if (i == 0) {
-                    viewAngle = parseInt(sliders[0].value);
-                    lookAtUpdate();
-                }
-            }
+        pls = [];
+        pls[0] = [[-edgeX, maxFloor, 0], [3, -1, 0],
+                  [centerX, maxFloor-1, 0], [10, 0, 0]];
+        pushHermitePoint([edgeX, maxFloor, 0], [3, 1, 0]);
     }
 
-    function sliderInit() {
-        for(let i = 0; i < sliderCount; ++i) {
-            sliders[i] = (document.getElementById('slider'+i)); 
-            sliders[i].addEventListener("input", draw);
+    function hermiteCubic(Basis, P,t){
+        let b = Basis(t);
+        let result=vec3.create();
+        vec3.scale(result,P[0],b[0]);
+        vec3.scaleAndAdd(result,result,P[1],b[1]);
+        vec3.scaleAndAdd(result,result,P[2],b[2]);
+        vec3.scaleAndAdd(result,result,P[3],b[3]);
+        return result;
+    }
+   
+    function hermiteBasis(t) 
+    { return [2*t*t*t-3*t*t+1, t*t*t-2*t*t+t, -2*t*t*t+3*t*t, t*t*t-t*t ]; }
+
+	function hermiteDerivative(t) 
+    { return [ 6*t*t-6*t, 3*t*t-4*t+1, -6*t*t+6*t, 3*t*t-2*t ]; }
+
+    // switch to different points in defined hermite curve at different t
+    function composite(t, B) {
+        for(let i = 0; i < pls.length; ++i) {
+            if (i <= t && t < i+1)
+                return hermiteCubic(B, pls[i], t<1 ? t : t%i);
+            else if (t == pls.length) 
+                return hermiteCubic(B, pls[pls.length-1], 1);
         }
-        sliders[0].value = 0;                         // FIXME: manually adjustable viewAngle for now
-        sliderUpdate();
     }
-    
+
+    function drawCurve(t0, t1, granularity, curve, T, color, P, thickness) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = thickness;
+        ctx.beginPath();
+
+        P ? moveTo(curve(hermiteBasis, P, t0)) : moveTo(curve(t0));
+        for(let i = 0; i <= granularity; ++i) {
+            let p = (granularity - i)/granularity;
+            let t = p*t0 + (i/granularity)*t1;
+            let coor = P ? curve(hermiteBasis, P, t) : curve(t); 
+            lineTo(coor);
+        }
+        ctx.stroke();
+    }
+
     let floorRadiusRange = [3/3, 10/3];
     function getFloorRadius(floor, maxFloor, midFloor) { 
         let r; 
@@ -286,7 +247,6 @@ function setup() {
             ctx.strokeStyle = color; ctx.stroke();
         }
 
-
         // color the body first     // TODO: color tuning?
         let startColor = "#0033";
         for (let angle = startAngle; angle >= startAngle-360; angle -= angleJump) {
@@ -330,9 +290,9 @@ function setup() {
     }
 
     // multiple building manipulation in hierarchy
-    function positionBuildings(distance) {
+    function positionBuildingsAndRope(distance) {
         let maxFloor = 14, midFloor = 3;
-        let strokeColor = "#000", roofColor = "#84735a";
+        let strokeColor = "#000", roofColor = "#84735a", ropeColor = "#666";
 
         var leftBuilding = function() {
             save();
@@ -350,69 +310,40 @@ function setup() {
             drawBuilding(maxFloor, midFloor, "right", strokeColor, roofColor);
             restore();
         }
+        var drawRope = function() {
+            for (let i = 0; i < pls.length; ++i)
+                drawCurve(0, 1, 200, hermiteCubic, stack[0], ropeColor, pls[i], 3);
+        }
+
+        hermiteInit(distance, maxFloor);
         if (viewAngle%360 > 180) {
-            rightBuilding(); leftBuilding();
+            rightBuilding(); drawRope(); leftBuilding();
         } else {
-            leftBuilding(); rightBuilding();
+            leftBuilding(); drawRope(); rightBuilding();
         }
     }
 
-    // switch to different points in defined hermite curve at different t
-    function composite(t, B) {
-        for(let i = 0; i < pls.length; ++i) {
-            if (i <= t && t < i+1)
-                return hermiteCubic(B, pls[i], t<1 ? t : t%i);
-            else if (t == pls.length) 
-                return hermiteCubic(B, pls[pls.length-1], 1);
+    // update variables affected by sliders
+    function sliderUpdate() {
+        for(let i = 0; i < sliderCount; ++i)
+            if (sliderVals[i] != sliders[i].value) {
+                sliderVals[i] = (sliders[i].value); 
+                if (i == 0) {
+                    viewAngle = parseInt(sliders[0].value);
+                    lookAtUpdate();
+                }
+            }
+    }
+
+    function sliderInit() {
+        for(let i = 0; i < sliderCount; ++i) {
+            sliders[i] = (document.getElementById('slider'+i)); 
+            sliders[i].addEventListener("input", draw);
         }
+        sliders[0].value = 0;                         // FIXME: manually adjustable viewAngle for now
+        sliderUpdate();
     }
-
-    // hermite related 
-    // initialization of a set of Hermite points
-    function hermiteInit() {
-
-        // helper to insert a point into an array in hermite cubic formatting
-        let pushHermitePoint = function(p, d) 
-        { let last = pls[pls.length-1]; pls.push([last[2], last[3], p, d]); }
-
-        pls = [];
-        pls[0] = [[-15/2+10/3, 14, 0], [3, -1, 0],
-                  [0, 10, 0], [8, 0, 0]];
-        pushHermitePoint([-15/2-10/3, 14, 0], [3, 1, 0]);
-    }
-
-    function hermiteCubic(Basis, P,t){
-        let b = Basis(t);
-        let result=vec2.create();
-        vec3.scale(result,P[0],b[0]);
-        vec3.scaleAndAdd(result,result,P[1],b[1]);
-        vec3.scaleAndAdd(result,result,P[2],b[2]);
-        vec3.scaleAndAdd(result,result,P[3],b[3]);
-        return result;
-    }
-   
-    function hermiteBasis(t) 
-    { return [2*t*t*t-3*t*t+1, t*t*t-2*t*t+t, -2*t*t*t+3*t*t, t*t*t-t*t ]; }
-
-	function hermiteDerivative(t) 
-    { return [ 6*t*t-6*t, 3*t*t-4*t+1, -6*t*t+6*t, 3*t*t-2*t ]; }
-
-
-    function drawCurve(t0, t1, granularity, curve, T, color, P, thickness) {
-        ctx.strokeStyle = color;
-        ctx.lineWidth = thickness;
-        ctx.beginPath();
-
-        P ? moveTo(curve(hermiteBasis, P, t0), T) : moveTo(curve(t0), T);     // P == null -> not hermite
-        for(let i = 0; i <= granularity; ++i) {
-            let p = (granularity - i)/granularity;
-            let t = p*t0 + (i/granularity)*t1;
-            let coor = P ? curve(hermiteBasis, P, t) : curve(t); 
-            lineTo(coor[0], coor[1]);
-        }
-        ctx.stroke();
-    }
-
+    
     function draw(timestamp) {
         canvas.width = canvas.width;
         
@@ -424,47 +355,22 @@ function setup() {
         if (start === undefined) start = timestamp;
         elapsed = timestamp - start;
 
-        // curve drawing
+        // camera transformation
         save();                                             // main coordinate system
-        let T_to_curve = mat4.create();
+        let T_viewport = mat4.create();
         let scale = 40;
-        mat4.fromTranslation(T_to_curve, [canvas.width/2, canvas.width/2, 0]);
-        mat4.scale(T_to_curve, T_to_curve, [scale, -scale, -scale]);
-        mult(T_to_curve); 
-        
-        let T_projection = mat4.create();
-        mat4.ortho(T_projection, -1, 1, -1, 1, -1, 1);          // FIXME: orthographic?
-        mat4.multiply(T_projection, T_projection, T_look_at);
-        mult(T_projection);
-        
+        mat4.fromTranslation(T_viewport, [canvas.width/2, canvas.width/2, 0]);
+        mat4.scale(T_viewport, T_viewport, [scale, -scale, -scale]);
+        mult(T_viewport);
+        mult(T_look_at)
+
         // reference grid 
         // if (sliders[3].value == 1) drawGrid("white");
         drawGrid("white", 30); // TODO: slider control?
-        positionBuildings(25);
         
-        // FIXME
-        hermiteInit();
-        for (let i = 0; i < pls.length; ++i)
-            drawCurve(0, 1, 200, hermiteCubic, T_look_at, "white", pls[i], 2);
-
-        // curve drawing one by one
-        // let shift = 0.04;
-        // for(let track = 0; track < 1; ++track) {
-        //     if (track == 1) shiftP(shift, shift);
-        //     for(let i = 0; i < pls.length; ++i)
-        //         drawCurve(0, 1, 200, hermiteCubic, T_to_curve, "white", pls[i], 2);
-        //     if (track == 1) shiftP(-shift, -shift);
-        // }
-
-        // roller coaster
-        // let t_diff = 2.5;
-        // shiftP(shift/2, shift/2);
-        // tObj = getProportionInTime() * pls.length;
-
-        // for (let i in [...Array(numPeople).keys()]) {
-        // for (let i = 0; i < numPeople; ++i)
-        //     positionRoller((tObj+i*t_diff)%pls.length);
-        // shiftP(-shift/2, -shift/2);
+        // draw 2 buildings and a rope hanging around
+        positionBuildingsAndRope(25);
+        
 
         restore();                                          // main coordinate system
     }
