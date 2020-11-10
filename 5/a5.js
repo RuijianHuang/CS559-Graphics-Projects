@@ -190,10 +190,10 @@ function setup() {
         return r;
     }
 
-    function drawBuilding(maxFloor, midFloor, strokeColor, fillColor, roofColor) {
+    function drawBuilding(maxFloor, midFloor, buildingSide, strokeColor, fillColor, roofColor) {
         let floorRadius;
         let rad;
-        let startAngle = 90; 
+        let startAngle = 90, startRadian = radian(startAngle);
         let angleJump = 360/30;
         let x; let y; let z;
         ctx.strokeStyle = strokeColor;
@@ -203,7 +203,6 @@ function setup() {
             let compareAngle = Math.abs(angle-startAngle);
             return compareAngle < viewAngle-90 | (compareAngle > viewAngle+90 && compareAngle < viewAngle+270);
         }
-        
         var bottomToMiddle = function(angle) {
             ctx.beginPath();
             rad=radian(angle);
@@ -223,7 +222,6 @@ function setup() {
             ctx.closePath();
             ctx.stroke(); ctx.fillStyle = fillColor; ctx.fill();
         }
-        
         var middleToTop = function(angle) {
             rad=radian(angle);
             x = floorRadiusRange[0]*Math.cos(rad);  // from the pt at midFloor, at this angle
@@ -243,7 +241,6 @@ function setup() {
             ctx.stroke(); ctx.fillStyle = fillColor; ctx.fill();
             
         }
-
         var helipad = function(color) {
             let r = 2.5; moveTo([r, maxFloor, 0]);
             for (let angle=0; angle<=360; angle+=angleJump)
@@ -266,6 +263,24 @@ function setup() {
             ctx.fillStyle = color; ctx.fill();
             restore();
         }
+        
+        var roofBarrier = function(color, barrierHeight, buildingSide) {
+            ctx.beginPath();
+            moveTo([floorRadius*Math.cos(startRadian), y+0.5, floorRadius*Math.sin(startRadian)]);
+            for (let angle = startAngle; angle >= startAngle-360; angle -= angleJump) {
+                rad = radian(angle); 
+                x = floorRadius*Math.cos(rad); z = floorRadius*Math.sin(rad);
+                moveTo([x, maxFloor+barrierHeight, z]); lineTo([x, maxFloor, z]);
+                if (buildingSide == "left" && angle>0 && angle-angleJump<0) continue;
+                if (buildingSide == "right" && angle>-180 && angle-angleJump<-180) continue;
+                moveTo([x, maxFloor+barrierHeight, z]);
+                angle -= angleJump; rad = radian(angle); 
+                x = floorRadius*Math.cos(rad); z = floorRadius*Math.sin(rad);
+                lineTo([x, maxFloor+barrierHeight, z]);
+                angle += angleJump;
+            }
+            ctx.strokeStyle = color; ctx.stroke();
+        }
 
         // color the body first
         for (let angle = startAngle; angle >= startAngle-360; angle -= angleJump) {
@@ -280,7 +295,6 @@ function setup() {
             floorRadius = getFloorRadius(floor, maxFloor, midFloor);
 
             ctx.beginPath();
-            let startRadian = radian(startAngle);
             moveTo([floorRadius*Math.cos(startRadian), y, floorRadius*Math.sin(startRadian)]);
             for (let angle = startAngle; angle >= startAngle-360; angle -= angleJump) {
                 rad = radian(angle)
@@ -301,6 +315,7 @@ function setup() {
                 helipad("#000");        // additional ring and a "H"
             }
         }
+        roofBarrier("#666", 0.5, buildingSide);
     }
 
     // multiple building manipulation in hierarchy
@@ -312,14 +327,14 @@ function setup() {
         let T_to_left_building =mat4.create();
         mat4.fromTranslation(T_to_left_building, [-distance/2, 0, 0]);
         mult(T_to_left_building);
-        drawBuilding(maxFloor, midFloor, strokeColor, bodyColor, roofColor);
+        drawBuilding(maxFloor, midFloor, "left", strokeColor, bodyColor, roofColor);
         restore();
 
         save();
         let T_to_right_building =mat4.create();
         mat4.fromTranslation(T_to_right_building, [distance/2, 0, 0]);
         mult(T_to_right_building);
-        drawBuilding(maxFloor, midFloor, strokeColor, bodyColor, roofColor);
+        drawBuilding(maxFloor, midFloor, "right", strokeColor, bodyColor, roofColor);
         restore();
     }
 
