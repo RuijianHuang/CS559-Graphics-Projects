@@ -190,7 +190,7 @@ function setup() {
         return r;
     }
 
-    function drawBuilding(maxFloor, midFloor, buildingSide, strokeColor, fillColor, roofColor) {
+    function drawBuilding(maxFloor, midFloor, buildingSide, strokeColor, roofColor) {
         let floorRadius;
         let rad;
         let startAngle = 90, startRadian = radian(startAngle);
@@ -201,9 +201,14 @@ function setup() {
         
         var isInvisible = function(angle) {
             let compareAngle = Math.abs(angle-startAngle);
-            return compareAngle < viewAngle-90 | (compareAngle > viewAngle+90 && compareAngle < viewAngle+270);
+            let va = viewAngle % 360;
+
+            if (90 <= va && va < 270)
+                return va+90 < compareAngle || compareAngle < (va+270)%360;
+            else
+                return (va+90)%360 < compareAngle && compareAngle < (va+270)%360;
         }
-        var bottomToMiddle = function(angle) {
+        var bottomToMiddle = function(angle, fillColor) {
             ctx.beginPath();
             rad=radian(angle);
             x = floorRadiusRange[1]*Math.cos(rad);  // from the pt at floor 0, at this angle
@@ -222,7 +227,7 @@ function setup() {
             ctx.closePath();
             ctx.stroke(); ctx.fillStyle = fillColor; ctx.fill();
         }
-        var middleToTop = function(angle) {
+        var middleToTop = function(angle, fillColor) {
             rad=radian(angle);
             x = floorRadiusRange[0]*Math.cos(rad);  // from the pt at midFloor, at this angle
             z = floorRadiusRange[0]*Math.sin(rad);
@@ -263,10 +268,9 @@ function setup() {
             ctx.fillStyle = color; ctx.fill();
             restore();
         }
-        
         var roofBarrier = function(color, barrierHeight, buildingSide) {
             ctx.beginPath();
-            moveTo([floorRadius*Math.cos(startRadian), y+0.5, floorRadius*Math.sin(startRadian)]);
+            moveTo([floorRadius*Math.cos(startRadian), y+barrierHeight, floorRadius*Math.sin(startRadian)]);
             for (let angle = startAngle; angle >= startAngle-360; angle -= angleJump) {
                 rad = radian(angle); 
                 x = floorRadius*Math.cos(rad); z = floorRadius*Math.sin(rad);
@@ -282,11 +286,18 @@ function setup() {
             ctx.strokeStyle = color; ctx.stroke();
         }
 
-        // color the body first
+
+        // color the body first     // TODO: color tuning?
+        let startColor = "#0033";
         for (let angle = startAngle; angle >= startAngle-360; angle -= angleJump) {
             if (isInvisible(angle)) continue;
-            bottomToMiddle(angle);
-            middleToTop(angle);
+            let c_off = parseInt(Math.abs(angle)/360*256);
+            if (c_off>256/2) c_off=256/2-(c_off-256/2);
+            let c = c_off.toString(16)
+            c = (c.length<2?"0"+c:c);
+            c = startColor + c;
+            bottomToMiddle(angle, c);
+            middleToTop(angle, c);
         }
 
         // then draw some contours of floors
@@ -315,27 +326,35 @@ function setup() {
                 helipad("#000");        // additional ring and a "H"
             }
         }
-        roofBarrier("#666", 0.5, buildingSide);
+        roofBarrier("#666", 0.3, buildingSide);
     }
 
     // multiple building manipulation in hierarchy
     function positionBuildings(distance) {
         let maxFloor = 14, midFloor = 3;
-        let strokeColor = "#262", bodyColor = "#000", roofColor = "#84735a";
+        let strokeColor = "#000", roofColor = "#84735a";
 
-        save();
-        let T_to_left_building =mat4.create();
-        mat4.fromTranslation(T_to_left_building, [-distance/2, 0, 0]);
-        mult(T_to_left_building);
-        drawBuilding(maxFloor, midFloor, "left", strokeColor, bodyColor, roofColor);
-        restore();
-
-        save();
-        let T_to_right_building =mat4.create();
-        mat4.fromTranslation(T_to_right_building, [distance/2, 0, 0]);
-        mult(T_to_right_building);
-        drawBuilding(maxFloor, midFloor, "right", strokeColor, bodyColor, roofColor);
-        restore();
+        var leftBuilding = function() {
+            save();
+            let T_to_left_building =mat4.create();
+            mat4.fromTranslation(T_to_left_building, [-distance/2, 0, 0]);
+            mult(T_to_left_building);
+            drawBuilding(maxFloor, midFloor, "left", strokeColor, roofColor);
+            restore();
+        }
+        var rightBuilding = function() {
+            save();
+            let T_to_right_building =mat4.create();
+            mat4.fromTranslation(T_to_right_building, [distance/2, 0, 0]);
+            mult(T_to_right_building);
+            drawBuilding(maxFloor, midFloor, "right", strokeColor, roofColor);
+            restore();
+        }
+        if (viewAngle%360 > 180) {
+            rightBuilding(); leftBuilding();
+        } else {
+            leftBuilding(); rightBuilding();
+        }
     }
 
     // switch to different points in defined hermite curve at different t
