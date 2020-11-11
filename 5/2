@@ -65,7 +65,7 @@ function setup() {
         ctx.beginPath();
 
         if (!beyondFloor) {
-        ctx.strokeStyle = "#222";
+            ctx.strokeStyle = "#222";
             for (let xx = x[0]; xx <= x[1]; xx += x_step)
             { moveTo([xx, 0, z[0]]); lineTo([xx, 0, z[1]]); }
             for (let zz = z[0]; zz <= z[1]; zz += z_step)
@@ -420,6 +420,7 @@ function setup() {
             if (sliderVals[i] != sliders[i].value) {
                 sliderVals[i] = (sliders[i].value); 
                 if (i == 0) {
+                    locCamera[1] = parseInt(sliders[0].value)
                     // viewAngle = parseInt(sliders[0].value);
                     // viewAngle = getProportionInTime()*360;       // FIXME
                     // lookAtUpdate(); 
@@ -432,7 +433,7 @@ function setup() {
             sliders[i] = (document.getElementById('slider'+i)); 
             sliders[i].addEventListener("input", draw);
         }
-        sliders[0].value = 0;                         // FIXME: manually adjustable viewAngle for now
+        sliders[0].value = 45;                         // FIXME: manually adjustable viewAngle for now
         sliderUpdate();
     }
     
@@ -462,7 +463,8 @@ function setup() {
         mult(T_look_at)
 
         // reference grid 
-        drawGrid("white", 50, sliders[0].value==1?true:false);
+        // if (sliders[3].value == 1)
+        drawGrid("white", 50, false);
         
         // draw 2 buildings and a rope hanging around
         positionBuildingsAndRope(25);
