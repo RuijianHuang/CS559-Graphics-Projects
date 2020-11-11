@@ -1,0 +1,9 @@
+This program is a helicopter view of a "tightrope dancing" scene, which 
+does not make lots of sence. But check it out!
+Some waltz music might be a good accompaniment.
+
+Some components of this program include basic 3D objects, animation, bezier
+curve (adjustable), perspective projection (one roof slightly smaller than 
+another), and stick figures!
+The only slider acts as a switch that helps me visualize a grid when drawing. 
+Enjoy :)
