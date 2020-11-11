@@ -256,7 +256,7 @@ function setup() {
             else
                 return (va+90)%360 < compareAngle && compareAngle < (va+270)%360;
         }
-        var bottomToMiddle = function(angle, fillColor) {
+        var bottomToMiddle = function(angle, fillColor, strokeColor) {
             ctx.beginPath();
             rad=radian(angle);
             x = floorRadiusRange[1]*Math.cos(rad);  // from the pt at floor 0, at this angle
@@ -273,9 +273,10 @@ function setup() {
             z = floorRadiusRange[1]*Math.sin(rad);
             lineTo([x, 0, z]);
             ctx.closePath();
-            ctx.stroke(); ctx.fillStyle = fillColor; ctx.fill();
+            ctx.strokeStyle = strokeColor; ctx.stroke(); 
+            ctx.fillStyle = fillColor; ctx.fill();
         }
-        var middleToTop = function(angle, fillColor) {
+        var middleToTop = function(angle, fillColor, strokeColor) {
             rad=radian(angle);
             x = floorRadiusRange[0]*Math.cos(rad);  // from the pt at midFloor, at this angle
             z = floorRadiusRange[0]*Math.sin(rad);
@@ -291,7 +292,8 @@ function setup() {
             z = floorRadiusRange[0]*Math.sin(rad);
             lineTo([x, maxFloor-midFloor, z]);
             ctx.closePath();
-            ctx.stroke(); ctx.fillStyle = fillColor; ctx.fill();
+            ctx.strokeStyle = strokeColor; ctx.stroke(); 
+            ctx.fillStyle = fillColor; ctx.fill();
             
         }
         var helipad = function(color) {
@@ -333,21 +335,22 @@ function setup() {
             }
             ctx.strokeStyle = color; ctx.stroke();
         }
-        var whichColor = function(angle) {
-            let startColor = "#00";
-            let c_off = parseInt(Math.abs(angle)/360*256);
-            if (c_off>256/2) c_off=256/2-(c_off-256/2);
+        var whichColor = function(prefix, angle, suffix, colorRange) {
+            let c_off = parseInt(Math.abs(angle)/360*colorRange);
+            if (c_off>colorRange/2) c_off=colorRange/2-(c_off-colorRange/2);
             let c = c_off.toString(16)
             c = (c.length<2?"0"+c:c);
-            return startColor+c+c;
+            return prefix+c+suffix;
         }
 
         // color the body first
         for (let angle = startAngle; angle >= startAngle-360; angle -= angleJump) {
             if (isInvisible(angle)) continue;
-            let color = whichColor(angle);
-            bottomToMiddle(angle, color);
-            middleToTop(angle, color);
+            let fillColor = whichColor("#00", angle, "00", 100);
+            let strokeColor = whichColor("#00", angle, "00", 256);
+            // let fillColor1 = whichColor("#00", (angle+180)%360, "00", 100);
+            bottomToMiddle(angle, fillColor, strokeColor);
+            middleToTop(angle, fillColor, strokeColor);
         }
 
         // then draw some contours of floors
@@ -368,11 +371,12 @@ function setup() {
                     else lineTo([x, y, z]);
                 }
             }
+            ctx.strokeStyle = "#116611";
             ctx.stroke();
 
             // top floor decoration
             if (floor == 0) { 
-                ctx.fillStyle = roofColor; ctx.fill(); ctx.closePath(); 
+                ctx.closePath(); ctx.fillStyle = roofColor; ctx.fill();
                 helipad("#000");        // additional ring and a "H"
             }
         }
