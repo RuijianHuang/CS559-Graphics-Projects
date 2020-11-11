@@ -20,12 +20,12 @@ function setup() {
     // camera definition
     let viewAngle;
     let locCamera = vec3.create();
-    let distCamera = 500.0;
+    let distCamera = 200.0;
     let T_look_at = mat4.create();
 
     function lookAtUpdate() {
         locCamera[0] = distCamera * Math.sin(radian(viewAngle));
-        locCamera[1] = 100;
+        locCamera[1] = 50;
         locCamera[2] = distCamera * Math.cos(radian(viewAngle));
         mat4.lookAt(T_look_at, locCamera, [0, 0, 0], [0, 1, 0]);
     }
@@ -459,7 +459,7 @@ function setup() {
         // camera transformation
         save();                                             // main coordinate system
         let T_viewport = mat4.create();
-        let scale = 45;
+        let scale = 20;
         mat4.fromTranslation(T_viewport, [canvas.width/2, canvas.height/4*3, 0]);
         mat4.scale(T_viewport, T_viewport, [scale, -scale, -scale]);
         
@@ -480,7 +480,7 @@ function setup() {
         drawGrid("white", "#333", 50, sliders[0].value==1?true:false);
         
         // draw 2 buildings and a rope hanging around
-        positionBuildingsAndRope(47);
+        positionBuildingsAndRope(40);
         positionObject();
 
         restore();                                          // main coordinate system
