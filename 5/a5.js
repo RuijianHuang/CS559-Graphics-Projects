@@ -7,15 +7,15 @@ function setup() {
     let sliders = [];
     let sliderVals = [];
 
-    // animation timing related TODO?
+    // animation timing related
     let start;                      // mark the start of time
     let elapsed;                    // time elapsed
-    let cycle = 100000;                      // define length of an animation cycle
+    let cycle = 15000;              // define length of an animation cycle
 
     // global variables
     let stack = [mat4.create()];    // array as stack for save and restore emulation
     let pls;                        // array containing all points describing the hermite curve
-    let tObj;                       // record where the obj is through parameter t  FIXME
+    let tObj;                       // record where the obj is through parameter t
     
     // camera definition
     let viewAngle;
@@ -84,23 +84,20 @@ function setup() {
         ctx.stroke();
     }
 
-    // initialization of a set of Hermite points
-    function hermiteInit(distance, maxFloor) {
-        // helper to insert a point into an array in hermite cubic formatting
-        let pushHermitePoint = function(p, d) 
-        { let last = pls[pls.length-1]; pls.push([last[2], last[3], p, d]); }
-
-        let prop = viewAngle/360;
+    // bezier functions
+    function bezierInit(distance, maxFloor) {
         let edgeX = distance/2-floorRadiusRange[1];
-        let centerX = prop>0.5 ? (prop-0.5)/0.5*edgeX : -(0.5-prop)*edgeX*2;
-
+        let p = getProportionInTime();
+        p = p < 0.5 ? p*2 : (0.5-(p-0.5))*2;
+        let centerX = p>0.5 ? (p-0.5)/0.5*edgeX : -(0.5-p)*edgeX*2;
+        let dentY = maxFloor-2;
         pls = [];
-        pls[0] = [[-edgeX, maxFloor, 0], [3, -1, 0],
-                  [centerX, maxFloor-1, 0], [10, 0, 0]];
-        pushHermitePoint([edgeX, maxFloor, 0], [3, 1, 0]);
+        pls[0] = [[-edgeX, maxFloor, 0], [centerX, dentY, 0], 
+                  [centerX, dentY, 0],   [edgeX, maxFloor, 0]];
     }
-
-    function hermiteCubic(Basis, P,t){
+    function bezierBasis(t)
+    { return [1-3*t+3*t*t-t*t*t, 3*t-6*t*t+3*t*t*t, 3*t*t-3*t*t*t, t*t*t]; }
+    function someCubic(Basis, P,t){
         let b = Basis(t);
         let result=vec3.create();
         vec3.scale(result,P[0],b[0]);
@@ -109,21 +106,100 @@ function setup() {
         vec3.scaleAndAdd(result,result,P[3],b[3]);
         return result;
     }
-   
-    function hermiteBasis(t) 
-    { return [2*t*t*t-3*t*t+1, t*t*t-2*t*t+t, -2*t*t*t+3*t*t, t*t*t-t*t ]; }
-
-	function hermiteDerivative(t) 
-    { return [ 6*t*t-6*t, 3*t*t-4*t+1, -6*t*t+6*t, 3*t*t-2*t ]; }
 
     // switch to different points in defined hermite curve at different t
     function composite(t, B) {
         for(let i = 0; i < pls.length; ++i) {
             if (i <= t && t < i+1)
-                return hermiteCubic(B, pls[i], t<1 ? t : t%i);
+                return someCubic(B, pls[i], t<1 ? t : t%i);
             else if (t == pls.length) 
-                return hermiteCubic(B, pls[pls.length-1], 1);
+                return someCubic(B, pls[pls.length-1], 1);
         }
+    }
+
+    function head(headHeight, headScale) {
+        save();
+        ctx.beginPath();
+        let T_head = mat4.create();
+        mat4.fromTranslation(T_head, [0, headScale, 0]);
+        mat4.scale(T_head, T_head, [headScale, headScale, headScale]);
+        mult(T_head);
+        moveTo([1, 1, 1]); 
+        lineTo([-1, 1, 1]); lineTo([-1, 1, -1]);    // upper
+        lineTo([1, 1, -1]); lineTo([1, 1, 1]);
+        lineTo([1, -1, 1]);
+        lineTo([-1, -1, 1]); lineTo([-1, -1, -1]);  // lower
+        lineTo([1, -1, -1]); lineTo([1, -1, 1]);
+        moveTo([-1, -1, 1]); lineTo([-1, 1, 1]);    // connecting edges
+        moveTo([-1, -1, -1]); lineTo([-1, 1, -1]);
+        moveTo([1, -1, -1]); lineTo([1, 1, -1]);
+        ctx.closePath();
+        ctx.stroke();
+        restore();
+    }
+
+    function body(neckHeight) {
+        // body and legs
+        ctx.beginPath();
+        moveTo([0, neckHeight, 0]);
+        lineTo([0, neckHeight/2, 0]);                           // body
+        lineTo([neckHeight/8, neckHeight/3, -neckHeight/9]);    // leg1
+        lineTo([0, 0, 0]);
+        moveTo([0, neckHeight/2, 0]);                           // leg2
+        lineTo([neckHeight/8, neckHeight/3, neckHeight/9]);
+        lineTo([0, 0, 0]);
+        ctx.stroke();
+        
+        // arms
+        ctx.beginPath();
+        moveTo([0, neckHeight/3*2.2, 0]);                       // arm1
+        lineTo([neckHeight/4, neckHeight/3*1.8, neckHeight/8]);
+        lineTo([neckHeight/2, neckHeight/3*1.6, 0]);
+        moveTo([0, neckHeight/3*2.2, 0]);                       // arm2
+        lineTo([neckHeight/4, neckHeight/3*1.8, -neckHeight/8]);
+        lineTo([neckHeight/2, neckHeight/3*1.6, 0]);
+    }
+
+    // stick man drawing
+    function drawObj(color) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 4;
+        let headHeight = 3, headScale = 0.3, leanAngle = 43;
+        let neckHeight = headHeight-headScale;
+        
+        save();
+        let T_the_man = mat4.create();
+        mat4.rotateZ(T_the_man, T_the_man, radian(leanAngle));
+        mult(T_the_man);
+
+        save(); 
+        let T_headBend = mat4.create();
+        mat4.fromTranslation(T_headBend, [0, neckHeight, 0]);
+        mat4.rotateZ(T_headBend, T_headBend, radian(-leanAngle+4));
+        mult(T_headBend);
+        head(headHeight, headScale);
+        restore();
+
+        body(neckHeight);
+        ctx.stroke();
+        restore();
+    }
+    
+    function positionObject() {
+        save();
+        let T_to_obj = mat4.create();
+        mat4.fromTranslation(T_to_obj, composite(tObj, bezierBasis));
+        mat4.rotateY(T_to_obj, T_to_obj, radian(getProportionInTime()*360*20));              // FIXME
+        mult(T_to_obj);
+
+        drawObj("#009fff");
+        save();
+        let T_mirror = mat4.create();
+        mat4.scale(T_mirror, T_mirror, [-1, 1, -1]);
+        mult(T_mirror);
+        drawObj("tan");
+        restore();
+        restore();
     }
 
     function drawCurve(t0, t1, granularity, curve, T, color, P, thickness) {
@@ -131,11 +207,11 @@ function setup() {
         ctx.lineWidth = thickness;
         ctx.beginPath();
 
-        P ? moveTo(curve(hermiteBasis, P, t0)) : moveTo(curve(t0));
+        P ? moveTo(curve(bezierBasis, P, t0)) : moveTo(curve(t0));
         for(let i = 0; i <= granularity; ++i) {
             let p = (granularity - i)/granularity;
             let t = p*t0 + (i/granularity)*t1;
-            let coor = P ? curve(hermiteBasis, P, t) : curve(t); 
+            let coor = P ? curve(bezierBasis, P, t) : curve(t); 
             lineTo(coor);
         }
         ctx.stroke();
@@ -246,18 +322,21 @@ function setup() {
             }
             ctx.strokeStyle = color; ctx.stroke();
         }
-
-        // color the body first     // TODO: color tuning?
-        let startColor = "#0033";
-        for (let angle = startAngle; angle >= startAngle-360; angle -= angleJump) {
-            if (isInvisible(angle)) continue;
+        var whichColor = function(angle) {
+            let startColor = "#00";
             let c_off = parseInt(Math.abs(angle)/360*256);
             if (c_off>256/2) c_off=256/2-(c_off-256/2);
             let c = c_off.toString(16)
             c = (c.length<2?"0"+c:c);
-            c = startColor + c;
-            bottomToMiddle(angle, c);
-            middleToTop(angle, c);
+            return startColor+c+c;
+        }
+
+        // color the body first
+        for (let angle = startAngle; angle >= startAngle-360; angle -= angleJump) {
+            if (isInvisible(angle)) continue;
+            let color = whichColor(angle);
+            bottomToMiddle(angle, color);
+            middleToTop(angle, color);
         }
 
         // then draw some contours of floors
@@ -292,7 +371,7 @@ function setup() {
     // multiple building manipulation in hierarchy
     function positionBuildingsAndRope(distance) {
         let maxFloor = 14, midFloor = 3;
-        let strokeColor = "#000", roofColor = "#84735a", ropeColor = "#666";
+        let strokeColor = "#000", roofColor = "#84735a", ropeColor = "#875638";
 
         var leftBuilding = function() {
             save();
@@ -312,10 +391,11 @@ function setup() {
         }
         var drawRope = function() {
             for (let i = 0; i < pls.length; ++i)
-                drawCurve(0, 1, 200, hermiteCubic, stack[0], ropeColor, pls[i], 3);
+                drawCurve(0, 1, 200, someCubic, stack[0], ropeColor, pls[i], 7);
         }
 
-        hermiteInit(distance, maxFloor);
+        // hermiteInit(distance, maxFloor);
+        bezierInit(distance, maxFloor);
         if (viewAngle%360 > 180) {
             rightBuilding(); drawRope(); leftBuilding();
         } else {
@@ -329,8 +409,9 @@ function setup() {
             if (sliderVals[i] != sliders[i].value) {
                 sliderVals[i] = (sliders[i].value); 
                 if (i == 0) {
-                    viewAngle = parseInt(sliders[0].value);
-                    lookAtUpdate();
+                    // viewAngle = parseInt(sliders[0].value);
+                    // viewAngle = getProportionInTime()*360;       // FIXME
+                    // lookAtUpdate(); 
                 }
             }
     }
@@ -340,20 +421,25 @@ function setup() {
             sliders[i] = (document.getElementById('slider'+i)); 
             sliders[i].addEventListener("input", draw);
         }
-        sliders[0].value = 0;                         // FIXME: manually adjustable viewAngle for now
+        sliders[0].value = 45;                         // FIXME: manually adjustable viewAngle for now
         sliderUpdate();
     }
     
     function draw(timestamp) {
         canvas.width = canvas.width;
         
-        // capture changes and update related variables
-        sliderUpdate();
-        
         // calculate time elapsed for animation
         timestamp = Date.now();
         if (start === undefined) start = timestamp;
         elapsed = timestamp - start;
+
+        let p = getProportionInTime();
+        tObj = p<0.5 ? p*2 : (0.5-(p-0.5))*2;
+
+        // capture changes and update related variables
+        sliderUpdate();
+        viewAngle = getProportionInTime()*360;
+        lookAtUpdate();
 
         // camera transformation
         save();                                             // main coordinate system
@@ -365,16 +451,18 @@ function setup() {
         mult(T_look_at)
 
         // reference grid 
-        // if (sliders[3].value == 1) drawGrid("white");
-        drawGrid("white", 30); // TODO: slider control?
+        // if (sliders[3].value == 1)
+        // drawGrid("white", 30);
         
         // draw 2 buildings and a rope hanging around
         positionBuildingsAndRope(25);
-        
+        positionObject();
 
         restore();                                          // main coordinate system
+
+        window.requestAnimationFrame(draw);
     }
     sliderInit();      // put all sliders into array 'sliders' and update last value;
-    draw(100);
+    window.requestAnimationFrame(draw);
 }
 window.onload=setup();
