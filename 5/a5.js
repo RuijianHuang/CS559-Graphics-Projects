@@ -10,7 +10,7 @@ function setup() {
     // animation timing related
     let start;                      // mark the start of time
     let elapsed;                    // time elapsed
-    let cycle = 15000;              // define length of an animation cycle
+    let cycle = 13000;              // define length of an animation cycle
 
     // global variables
     let stack = [mat4.create()];    // array as stack for save and restore emulation
@@ -54,18 +54,15 @@ function setup() {
     { let pt = vec3.create(); vec3.transformMat4(pt, loc, stack[0]); ctx.lineTo(pt[0], pt[1]); }
 
     // helper axes 
-    function drawGrid(color, size, beyondFloor) {
+    function drawGrid(axesColor, gridColor, size, beyondFloor) {
         // maximum range in x, y, z axes
         let x = [-size, size]; let x_step = size/5;
         let y = [-size, size]; let y_step = size/5;
         let z = [-size, size]; let z_step = size/5;
         
-        ctx.strokeStyle = color;
-        ctx.lineWidth=2;
-        ctx.beginPath();
-
+        ctx.strokeStyle = gridColor;
         if (!beyondFloor) {
-        ctx.strokeStyle = "#222";
+            ctx.beginPath();
             for (let xx = x[0]; xx <= x[1]; xx += x_step)
             { moveTo([xx, 0, z[0]]); lineTo([xx, 0, z[1]]); }
             for (let zz = z[0]; zz <= z[1]; zz += z_step)
@@ -74,12 +71,6 @@ function setup() {
             return;
         }
 
-        moveTo([x[0], 0, 0]); lineTo([x[1], 0, 0]); 
-        moveTo([0, y[0], 0]); lineTo([0, y[1], 0]);
-        moveTo([0, 0, z[0]]); lineTo([0, 0, z[1]]);
-        ctx.stroke();
-
-        ctx.strokeStyle = "#222";
         ctx.lineWidth = 1;
         ctx.beginPath();
         for (let zz = z[0]; zz <= z[1]; zz += z_step) {
@@ -93,13 +84,22 @@ function setup() {
             { moveTo([xx, yy, z[0]]); lineTo([xx, yy, z[1]]); }
         }
         ctx.stroke();
+
+        ctx.strokeStyle = axesColor;
+        ctx.lineWidth=2;
+        ctx.beginPath();
+
+        moveTo([x[0], 0, 0]); lineTo([x[1], 0, 0]); 
+        moveTo([0, y[0], 0]); lineTo([0, y[1], 0]);
+        moveTo([0, 0, z[0]]); lineTo([0, 0, z[1]]);
+        ctx.stroke();
+
     }
 
     // bezier functions
     function bezierInit(distance, maxFloor) {
         let edgeX = distance/2-floorRadiusRange[1];
-        let p = getProportionInTime();
-        p = p < 0.5 ? p*2 : (0.5-(p-0.5))*2;
+        let p = getProportionInTime(); p = p < 0.5 ? p*2 : (0.5-(p-0.5))*2;
         let centerX = p>0.5 ? (p-0.5)/0.5*edgeX : -(0.5-p)*edgeX*2;
         let dentY = maxFloor-2;
         pls = [];
@@ -213,7 +213,7 @@ function setup() {
         restore();
     }
 
-    function drawCurve(t0, t1, granularity, curve, T, color, P, thickness) {
+    function drawCurve(t0, t1, granularity, curve, color, P, thickness) {
         ctx.strokeStyle = color;
         ctx.lineWidth = thickness;
         ctx.beginPath();
@@ -385,7 +385,7 @@ function setup() {
 
     // multiple building manipulation in hierarchy
     function positionBuildingsAndRope(distance) {
-        let maxFloor = 14, midFloor = 3;
+        let maxFloor = 22, midFloor = 4;
         let strokeColor = "#000", roofColor = "#84735a", ropeColor = "#875638";
 
         var leftBuilding = function() {
@@ -406,7 +406,7 @@ function setup() {
         }
         var drawRope = function() {
             for (let i = 0; i < pls.length; ++i)
-                drawCurve(0, 1, 200, someCubic, stack[0], ropeColor, pls[i], 7);
+                drawCurve(0, 1, 200, someCubic, ropeColor, pls[i], 7);
         }
 
         // hermiteInit(distance, maxFloor);
@@ -436,7 +436,7 @@ function setup() {
             sliders[i] = (document.getElementById('slider'+i)); 
             sliders[i].addEventListener("input", draw);
         }
-        sliders[0].value = 0;                         // FIXME: manually adjustable viewAngle for now
+        sliders[0].value = 0;
         sliderUpdate();
     }
     
@@ -462,21 +462,32 @@ function setup() {
         let scale = 45;
         mat4.fromTranslation(T_viewport, [canvas.width/2, canvas.height/4*3, 0]);
         mat4.scale(T_viewport, T_viewport, [scale, -scale, -scale]);
+        
+        // projection
+        let T_projection = mat4.create();
+        mat4.perspective(T_projection, Math.PI/500, 1, -100000000, 10000000000000);
+
         mult(T_viewport);
+        mult(T_projection);
         mult(T_look_at)
+        // alternative
+        // let T_composite = mat4.create();
+        // mat4.multiply(T_composite, T_viewport, T_projection)
+        // mat4.multiply(T_composite, T_composite, T_look_at);
+        // mult(T_composite);
 
         // reference grid 
-        drawGrid("white", 50, sliders[0].value==1?true:false);
+        drawGrid("white", "#333", 50, sliders[0].value==1?true:false);
         
         // draw 2 buildings and a rope hanging around
-        positionBuildingsAndRope(25);
+        positionBuildingsAndRope(47);
         positionObject();
 
         restore();                                          // main coordinate system
 
         window.requestAnimationFrame(draw);
     }
-    sliderInit();      // put all sliders into array 'sliders' and update last value;
+    sliderInit();                   // put all sliders into array 'sliders' and update last value;
     window.requestAnimationFrame(draw);
 }
 window.onload=setup();
